@@ -91,10 +91,11 @@ export function EmployeesTab() {
         setNewEmployee({ name: "", email: "" });
         fetchEmployees();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to create employee:", err);
+      const axiosErr = err as { response?: { data?: { message?: string } } };
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to create employee";
+        axiosErr?.response?.data?.message || "Failed to create employee";
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
