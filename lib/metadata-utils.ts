@@ -32,8 +32,22 @@ export async function constructMetadata(pageName: string): Promise<Metadata> {
         images: ogImage ? [ogImage] : [],
       },
     };
-  } catch (error) {
-    console.error(`Error constructing metadata for ${pageName}:`, error);
+  } catch (error: any) {
+    const code = error?.code || error?.cause?.code;
+    const offline =
+      code === "ECONNREFUSED" ||
+      code === "ENOTFOUND" ||
+      code === "ETIMEDOUT" ||
+      code === "ECONNRESET";
+    if (offline) {
+      console.warn(
+        `[metadata:${pageName}] backend unreachable (${code}) — using default metadata`,
+      );
+    } else {
+      console.warn(
+        `[metadata:${pageName}] lookup failed — using default metadata (${error?.message || "unknown"})`,
+      );
+    }
     return {};
   }
 }

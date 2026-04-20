@@ -18,7 +18,10 @@ export const getAllSEOSettings = async () => {
 // Get SEO settings for a specific page (Admin)
 export const getSEOSettingsByPage = async (pageName: string) => {
   try {
-    const response = await axiosInstance.get(`/api/seo/${pageName}`);
+    // Short timeout so build-time metadata lookup can't hang on a slow/absent backend
+    const response = await axiosInstance.get(`/api/seo/${pageName}`, {
+      timeout: 3000,
+    });
     return response.data;
   } catch (error: any) {
     // Handle 404 gracefully - return empty success response
