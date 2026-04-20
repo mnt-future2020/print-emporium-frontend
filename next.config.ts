@@ -2,19 +2,11 @@
 const nextConfig = {
   output: 'standalone',
 
-  typescript: {
-    // Allows production builds to complete even if the project has type errors
-    ignoreBuildErrors: true,
-  },
-
-  eslint: {
-    // Ignore ESLint errors during builds
-    ignoreDuringBuilds: true,
-  },
+  // Configuration remains standard for Next.js 16
 
   images: {
-    // Disable default image optimization to save server resources on Hostinger
-    unoptimized: true,
+    // Enable default image optimization for better performance (requires sharp)
+    unoptimized: false,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
@@ -23,8 +15,9 @@ const nextConfig = {
     ],
   },
 
-  // CRITICAL: This prevents the 'ChunkLoadError' by telling browsers
-  // to always fetch the latest version of the page instead of caching old HTML.
+  // Optimized caching strategy:
+  // We allow short caching for HTML to prevent ChunkLoadError while enabling 
+  // browser's natural prefetching and caching capabilities.
   async headers() {
     return [
       {
@@ -32,7 +25,9 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            // Allow browser caching for 10 seconds, but require revalidation after that.
+            // This is a safe balance for Hostinger and similar shared hosting.
+            value: 'public, max-age=10, must-revalidate',
           },
         ],
       },

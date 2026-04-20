@@ -267,7 +267,11 @@ export function FileUploadStep({
                   {service.description || "Professional printing service"}
                 </div>
                 <div className="mt-2 text-xs font-medium text-primary">
-                  From ₹{service.basePricePerPage}/page
+                  From ₹
+                  {service.basePriceRanges && service.basePriceRanges.length > 0
+                    ? Math.min(...service.basePriceRanges.map((r) => r.price))
+                    : service.basePricePerPage}
+                  /page
                 </div>
               </button>
             ))}

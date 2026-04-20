@@ -91,6 +91,13 @@ export function ServicesListTab() {
     return matchesSearch && matchesStatus;
   });
 
+  const getDisplayBasePrice = (s: Service) => {
+    if (s.basePriceRanges && s.basePriceRanges.length > 0) {
+      return Math.min(...s.basePriceRanges.map((r) => r.price));
+    }
+    return s.basePricePerPage || 0;
+  };
+
   const stats = {
     total: services.length,
     active: services.filter((s) => s.status === "active").length,
@@ -98,7 +105,7 @@ export function ServicesListTab() {
     avgPrice:
       services.length > 0
         ? (
-            services.reduce((sum, s) => sum + s.basePricePerPage, 0) /
+            services.reduce((sum, s) => sum + getDisplayBasePrice(s), 0) /
             services.length
           ).toFixed(2)
         : "0",
@@ -353,7 +360,10 @@ export function ServicesListTab() {
                       <div className="flex items-center gap-2 font-semibold text-primary bg-primary/5 p-3 rounded-xl border border-primary/10">
                         <IndianRupee className="h-4 w-4" />
                         <span className="text-sm">
-                          Base Price: ₹{service.basePricePerPage}/page
+                          {service.basePriceRanges &&
+                          service.basePriceRanges.length > 0
+                            ? `Base Price: From ₹${getDisplayBasePrice(service)}/page (${service.basePriceRanges.length} ranges)`
+                            : `Base Price: ₹${service.basePricePerPage}/page`}
                         </span>
                       </div>
                     </>

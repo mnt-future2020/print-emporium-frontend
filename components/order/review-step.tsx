@@ -2,6 +2,15 @@
 
 import { useState, useRef } from "react";
 import { OrderItem, DeliveryInfo } from "@/lib/order-types";
+import { INDIAN_STATES } from "@/lib/india-states";
+import { lookupPincode, type PostOffice } from "@/lib/pincode-api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatPrice } from "@/lib/pricing-utils";
 import { formatFileSize } from "@/lib/file-utils";
 import { createOrder } from "@/lib/order-api";
@@ -83,8 +92,10 @@ const PrintableOrderSummary = ({
         <strong>Email:</strong> {deliveryInfo.email}
       </p>
       <p>
-        <strong>Address:</strong> {deliveryInfo.address}, {deliveryInfo.city},{" "}
-        {deliveryInfo.state} - {deliveryInfo.pincode}
+        <strong>Address:</strong> {deliveryInfo.doorNumber},{" "}
+        {deliveryInfo.address}
+        {deliveryInfo.landmark ? `, ${deliveryInfo.landmark}` : ""},{" "}
+        {deliveryInfo.city}, {deliveryInfo.state} - {deliveryInfo.pincode}
       </p>
     </div>
 
@@ -145,6 +156,8 @@ interface ReviewStepProps {
   orderItems: OrderItem[];
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
+  saveDetails: boolean;
+  onSaveDetailsChange: (next: boolean) => void;
   subtotal: number;
   deliveryCharge: number;
   packingCharge: number;
@@ -157,6 +170,8 @@ export function ReviewStep({
   orderItems,
   deliveryInfo,
   onDeliveryInfoChange,
+  saveDetails,
+  onSaveDetailsChange,
   subtotal,
   deliveryCharge,
   packingCharge,
@@ -176,6 +191,64 @@ export function ReviewStep({
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
   const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([]);
+
+  // Pincode lookup state
+  const [postOffices, setPostOffices] = useState<PostOffice[]>([]);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [pincodeError, setPincodeError] = useState("");
+  const pincodeAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      pincodeAbortRef.current?.abort();
+    };
+  }, []);
+
+  const fetchPincodeDetails = async (pincode: string) => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setPostOffices([]);
+      setPincodeError("");
+      return;
+    }
+    // Cancel any in-flight lookup
+    pincodeAbortRef.current?.abort();
+    const controller = new AbortController();
+    pincodeAbortRef.current = controller;
+
+    setPincodeLoading(true);
+    setPincodeError("");
+    try {
+      const result = await lookupPincode(pincode, controller.signal);
+      if (controller.signal.aborted) return;
+      if (!result) {
+        setPostOffices([]);
+        setPincodeError("Pincode not found — enter city/state manually");
+        return;
+      }
+      setPostOffices(result.postOffices);
+      const firstCity =
+        result.postOffices[0]?.name || result.district || "";
+      onDeliveryInfoChange({
+        ...deliveryInfo,
+        pincode,
+        state: result.state,
+        city: deliveryInfo.city || firstCity,
+      });
+      setErrors((prev) => ({ ...prev, state: "", city: "", pincode: "" }));
+    } catch (err: any) {
+      if (
+        err?.name === "CanceledError" ||
+        err?.name === "AbortError" ||
+        err?.code === "ERR_CANCELED"
+      ) {
+        return; // superseded by newer lookup — stay silent
+      }
+      setPincodeError("Couldn't fetch location — enter city/state manually");
+      setPostOffices([]);
+    } finally {
+      if (!controller.signal.aborted) setPincodeLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchCoupons = async () => {
@@ -198,59 +271,134 @@ export function ReviewStep({
     value: string | boolean,
   ) => {
     onDeliveryInfoChange({ ...deliveryInfo, [key]: value });
-    // Clear error when user types
+    // Clear error when user types / corrects
     if (errors[key as string]) {
       setErrors((prev) => ({ ...prev, [key]: "" }));
     }
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  // Per-field validators. Return empty string when valid.
+  const FIELD_ORDER = [
+    "fullName",
+    "phone",
+    "email",
+    "pincode",
+    "state",
+    "city",
+    "doorNumber",
+    "address",
+    "scheduledDate",
+  ] as const;
 
-    if (!deliveryInfo.fullName.trim()) {
-      newErrors.fullName = "Full name is required";
-    }
-    if (!deliveryInfo.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^[6-9]\d{9}$/.test(deliveryInfo.phone.trim())) {
-      newErrors.phone = "Enter a valid 10-digit phone number";
-    }
-    if (!deliveryInfo.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(deliveryInfo.email.trim())) {
-      newErrors.email = "Enter a valid email address";
-    }
-    if (!deliveryInfo.address.trim()) {
-      newErrors.address = "Address is required";
-    }
-    if (!deliveryInfo.city.trim()) {
-      newErrors.city = "City is required";
-    }
-    if (!deliveryInfo.state.trim()) {
-      newErrors.state = "State is required";
-    }
-    if (!deliveryInfo.pincode.trim()) {
-      newErrors.pincode = "Pincode is required";
-    } else if (!/^\d{6}$/.test(deliveryInfo.pincode.trim())) {
-      newErrors.pincode = "Enter a valid 6-digit pincode";
-    }
-
-    // Validate scheduled delivery date if enabled
-    if (deliveryInfo.scheduleDelivery && !deliveryInfo.scheduledDate) {
-      newErrors.scheduledDate = "Please select a delivery date";
-    } else if (deliveryInfo.scheduleDelivery && deliveryInfo.scheduledDate) {
-      const selectedDate = new Date(deliveryInfo.scheduledDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (selectedDate < today) {
-        newErrors.scheduledDate = "Delivery date cannot be in the past";
+  const validateField = (
+    key: (typeof FIELD_ORDER)[number],
+    info: DeliveryInfo,
+  ): string => {
+    switch (key) {
+      case "fullName": {
+        const n = info.fullName.trim();
+        if (!n) return "Full name is required";
+        if (n.length < 2) return "Name must be at least 2 characters";
+        if (n.length > 60) return "Name must be under 60 characters";
+        if (!/^[A-Za-z][A-Za-z\s.'-]*$/.test(n))
+          return "Use letters, spaces, dots, apostrophes or hyphens only";
+        return "";
+      }
+      case "phone": {
+        const p = info.phone.trim();
+        if (!p) return "Phone number is required";
+        if (!/^[6-9]\d{9}$/.test(p))
+          return "Enter a valid 10-digit Indian mobile number";
+        return "";
+      }
+      case "email": {
+        const e = info.email.trim();
+        if (!e) return "Email is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e))
+          return "Enter a valid email address";
+        if (e.length > 254) return "Email is too long";
+        return "";
+      }
+      case "pincode": {
+        const p = info.pincode.trim();
+        if (!p) return "Pincode is required";
+        if (!/^\d{6}$/.test(p)) return "Enter a valid 6-digit pincode";
+        return "";
+      }
+      case "state": {
+        const s = info.state.trim();
+        if (!s) return "Select a state";
+        if (!(INDIAN_STATES as readonly string[]).includes(s))
+          return "Pick a valid Indian state";
+        return "";
+      }
+      case "city": {
+        const c = info.city.trim();
+        if (!c) return "City / locality is required";
+        if (c.length < 2) return "City must be at least 2 characters";
+        return "";
+      }
+      case "doorNumber": {
+        const d = info.doorNumber.trim();
+        if (!d) return "Door / House no. is required";
+        if (d.length > 30) return "Keep door number under 30 characters";
+        return "";
+      }
+      case "address": {
+        const a = info.address.trim();
+        if (!a) return "Street address is required";
+        if (a.length < 5) return "Address must be at least 5 characters";
+        if (a.length > 250) return "Address is too long";
+        return "";
+      }
+      case "scheduledDate": {
+        if (!info.scheduleDelivery) return "";
+        if (!info.scheduledDate) return "Please select a delivery date";
+        const selected = new Date(info.scheduledDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (isNaN(selected.getTime())) return "Invalid date";
+        if (selected < today) return "Delivery date cannot be in the past";
+        return "";
       }
     }
+  };
 
+  const handleFieldBlur = (key: (typeof FIELD_ORDER)[number]) => {
+    const msg = validateField(key, deliveryInfo);
+    setErrors((prev) => ({ ...prev, [key]: msg }));
+  };
+
+  const focusField = (fieldId: string) => {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Radix Select trigger is a button — focus() works on both input and button.
+    setTimeout(() => {
+      (el as HTMLElement).focus({ preventScroll: true });
+    }, 300);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    for (const key of FIELD_ORDER) {
+      const msg = validateField(key, deliveryInfo);
+      if (msg) newErrors[key] = msg;
+    }
     setErrors(newErrors);
+
+    const firstErrorKey = FIELD_ORDER.find((k) => newErrors[k]);
+    if (firstErrorKey) focusField(firstErrorKey);
+
     return Object.keys(newErrors).length === 0;
   };
+
+  // Helper to build aria props for an input that may have an error
+  const ariaFor = (key: string) =>
+    errors[key]
+      ? { "aria-invalid": true as const, "aria-describedby": `${key}-error` }
+      : {};
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -423,6 +571,11 @@ export function ReviewStep({
 
             if (verifyRes.success) {
               toast.success("Payment successful! Order confirmed.");
+              if (!saveDetails) {
+                try {
+                  window.localStorage.removeItem("pe:deliveryInfo");
+                } catch {}
+              }
               router.push(`/dashboard?tab=orders&order=${order.id}`);
             } else {
               toast.error(
@@ -574,11 +727,17 @@ export function ReviewStep({
                   onChange={(e) =>
                     updateDeliveryInfo("fullName", e.target.value)
                   }
+                  onBlur={() => handleFieldBlur("fullName")}
                   placeholder="Enter your full name"
+                  autoComplete="name"
+                  maxLength={60}
                   className={cn(errors.fullName && "border-destructive")}
+                  {...ariaFor("fullName")}
                 />
                 {errors.fullName && (
-                  <p className="text-xs text-destructive">{errors.fullName}</p>
+                  <p id="fullName-error" className="text-xs text-destructive">
+                    {errors.fullName}
+                  </p>
                 )}
               </div>
 
@@ -586,13 +745,25 @@ export function ReviewStep({
                 <Label htmlFor="phone">Phone Number *</Label>
                 <Input
                   id="phone"
+                  inputMode="tel"
                   value={deliveryInfo.phone}
-                  onChange={(e) => updateDeliveryInfo("phone", e.target.value)}
+                  onChange={(e) =>
+                    updateDeliveryInfo(
+                      "phone",
+                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
+                  onBlur={() => handleFieldBlur("phone")}
                   placeholder="10-digit mobile number"
+                  autoComplete="tel"
+                  maxLength={10}
                   className={cn(errors.phone && "border-destructive")}
+                  {...ariaFor("phone")}
                 />
                 {errors.phone && (
-                  <p className="text-xs text-destructive">{errors.phone}</p>
+                  <p id="phone-error" className="text-xs text-destructive">
+                    {errors.phone}
+                  </p>
                 )}
               </div>
 
@@ -601,75 +772,192 @@ export function ReviewStep({
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
+                  onBlur={() => handleFieldBlur("email")}
+                  {...ariaFor("email")}
                   value={deliveryInfo.email}
                   onChange={(e) => updateDeliveryInfo("email", e.target.value)}
                   placeholder="your@email.com"
                   className={cn(errors.email && "border-destructive")}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
+                  <p id="email-error" className="text-xs text-destructive">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pincode">Pincode *</Label>
+                <div className="relative">
+                  <Input
+                    id="pincode"
+                    value={deliveryInfo.pincode}
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={6}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      updateDeliveryInfo("pincode", val);
+                      if (val.length === 6) void fetchPincodeDetails(val);
+                      else {
+                        setPostOffices([]);
+                        setPincodeError("");
+                      }
+                    }}
+                    onBlur={() => handleFieldBlur("pincode")}
+                    placeholder="6-digit pincode"
+                    className={cn(errors.pincode && "border-destructive")}
+                    {...ariaFor("pincode")}
+                  />
+                  {pincodeLoading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                {errors.pincode && (
+                  <p id="pincode-error" className="text-xs text-destructive">
+                    {errors.pincode}
+                  </p>
+                )}
+                {pincodeError && !errors.pincode && (
+                  <p className="text-xs text-amber-600">{pincodeError}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Select
+                  value={deliveryInfo.state}
+                  onValueChange={(v) => {
+                    updateDeliveryInfo("state", v);
+                    // immediately revalidate on pick
+                    setErrors((prev) => ({ ...prev, state: "" }));
+                  }}
+                >
+                  <SelectTrigger
+                    id="state"
+                    onBlur={() => handleFieldBlur("state")}
+                    className={cn(errors.state && "border-destructive")}
+                    {...ariaFor("state")}
+                  >
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDIAN_STATES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.state && (
+                  <p id="state-error" className="text-xs text-destructive">
+                    {errors.state}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="address">Delivery Address *</Label>
+                <Label htmlFor="city">City / Locality *</Label>
+                {postOffices.length > 0 ? (
+                  <Select
+                    value={deliveryInfo.city}
+                    onValueChange={(v) => {
+                      updateDeliveryInfo("city", v);
+                      setErrors((prev) => ({ ...prev, city: "" }));
+                    }}
+                  >
+                    <SelectTrigger
+                      id="city"
+                      onBlur={() => handleFieldBlur("city")}
+                      className={cn(errors.city && "border-destructive")}
+                      {...ariaFor("city")}
+                    >
+                      <SelectValue placeholder="Select locality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {postOffices.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          {p.name}
+                          {p.district ? ` — ${p.district}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="city"
+                    value={deliveryInfo.city}
+                    onChange={(e) => updateDeliveryInfo("city", e.target.value)}
+                    onBlur={() => handleFieldBlur("city")}
+                    autoComplete="address-level2"
+                    placeholder="Enter a 6-digit pincode to auto-fill, or type manually"
+                    className={cn(errors.city && "border-destructive")}
+                    {...ariaFor("city")}
+                  />
+                )}
+                {errors.city && (
+                  <p id="city-error" className="text-xs text-destructive">
+                    {errors.city}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="doorNumber">Door / House / Flat No. *</Label>
+                <Input
+                  id="doorNumber"
+                  value={deliveryInfo.doorNumber}
+                  onChange={(e) =>
+                    updateDeliveryInfo("doorNumber", e.target.value)
+                  }
+                  onBlur={() => handleFieldBlur("doorNumber")}
+                  placeholder="e.g., 12B, Flat 304"
+                  autoComplete="address-line2"
+                  maxLength={30}
+                  className={cn(errors.doorNumber && "border-destructive")}
+                  {...ariaFor("doorNumber")}
+                />
+                {errors.doorNumber && (
+                  <p id="doorNumber-error" className="text-xs text-destructive">
+                    {errors.doorNumber}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="address">Street / Area *</Label>
                 <Textarea
                   id="address"
                   value={deliveryInfo.address}
                   onChange={(e) =>
                     updateDeliveryInfo("address", e.target.value)
                   }
-                  placeholder="House/Flat No., Street, Landmark"
+                  onBlur={() => handleFieldBlur("address")}
+                  placeholder="Street name, area, colony"
+                  autoComplete="address-line1"
+                  maxLength={250}
                   rows={2}
                   className={cn(errors.address && "border-destructive")}
+                  {...ariaFor("address")}
                 />
                 {errors.address && (
-                  <p className="text-xs text-destructive">{errors.address}</p>
+                  <p id="address-error" className="text-xs text-destructive">
+                    {errors.address}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="landmark">Landmark (Optional)</Label>
                 <Input
-                  id="city"
-                  value={deliveryInfo.city}
-                  onChange={(e) => updateDeliveryInfo("city", e.target.value)}
-                  placeholder="City"
-                  className={cn(errors.city && "border-destructive")}
-                />
-                {errors.city && (
-                  <p className="text-xs text-destructive">{errors.city}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
-                  value={deliveryInfo.state}
-                  onChange={(e) => updateDeliveryInfo("state", e.target.value)}
-                  placeholder="State"
-                  className={cn(errors.state && "border-destructive")}
-                />
-                {errors.state && (
-                  <p className="text-xs text-destructive">{errors.state}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode *</Label>
-                <Input
-                  id="pincode"
-                  value={deliveryInfo.pincode}
+                  id="landmark"
+                  value={deliveryInfo.landmark || ""}
                   onChange={(e) =>
-                    updateDeliveryInfo("pincode", e.target.value)
+                    updateDeliveryInfo("landmark", e.target.value)
                   }
-                  placeholder="6-digit pincode"
-                  className={cn(errors.pincode && "border-destructive")}
+                  placeholder="Near …"
                 />
-                {errors.pincode && (
-                  <p className="text-xs text-destructive">{errors.pincode}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -682,6 +970,26 @@ export function ReviewStep({
                   }
                   placeholder="Any special instructions"
                 />
+              </div>
+
+              <div className="sm:col-span-2 flex items-start gap-2 rounded-lg border border-border/50 bg-muted/30 p-3">
+                <Checkbox
+                  id="saveDetails"
+                  checked={saveDetails}
+                  onCheckedChange={(v) => onSaveDetailsChange(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="saveDetails"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Save my details for next time
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Stored only on this device. Uncheck any time to clear.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -736,11 +1044,16 @@ export function ReviewStep({
                     onChange={(e) =>
                       updateDeliveryInfo("scheduledDate", e.target.value)
                     }
+                    onBlur={() => handleFieldBlur("scheduledDate")}
                     min={new Date().toISOString().split("T")[0]}
                     className={cn(errors.scheduledDate && "border-destructive")}
+                    {...ariaFor("scheduledDate")}
                   />
                   {errors.scheduledDate && (
-                    <p className="text-xs text-destructive">
+                    <p
+                      id="scheduledDate-error"
+                      className="text-xs text-destructive"
+                    >
                       {errors.scheduledDate}
                     </p>
                   )}

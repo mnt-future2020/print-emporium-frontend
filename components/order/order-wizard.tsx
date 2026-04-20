@@ -36,9 +36,43 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<OrderStep>("upload");
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>(
-    DEFAULT_DELIVERY_INFO,
-  );
+  const [saveDetails, setSaveDetails] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("pe:saveDetails") === "1";
+  });
+
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>(() => {
+    if (typeof window === "undefined") return DEFAULT_DELIVERY_INFO;
+    if (window.localStorage.getItem("pe:saveDetails") !== "1") {
+      return DEFAULT_DELIVERY_INFO;
+    }
+    try {
+      const raw = window.localStorage.getItem("pe:deliveryInfo");
+      if (!raw) return DEFAULT_DELIVERY_INFO;
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_DELIVERY_INFO, ...parsed };
+    } catch {
+      return DEFAULT_DELIVERY_INFO;
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (saveDetails) {
+      window.localStorage.setItem("pe:saveDetails", "1");
+      try {
+        window.localStorage.setItem(
+          "pe:deliveryInfo",
+          JSON.stringify(deliveryInfo),
+        );
+      } catch {
+        // storage full or disabled — ignore
+      }
+    } else {
+      window.localStorage.removeItem("pe:saveDetails");
+      window.localStorage.removeItem("pe:deliveryInfo");
+    }
+  }, [deliveryInfo, saveDetails]);
   const [activeItemIndex, setActiveItemIndex] = useState(0);
   const [selectedServiceForUpload, setSelectedServiceForUpload] =
     useState<Service>(service);
@@ -226,7 +260,6 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
             onBack={() => goToStep("upload")}
             onNext={() => goToStep("review")}
             canProceed={canProceedToReview}
-            subtotal={subtotal}
           />
         )}
 
@@ -235,6 +268,8 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
             orderItems={orderItems}
             deliveryInfo={deliveryInfo}
             onDeliveryInfoChange={handleDeliveryInfoChange}
+            saveDetails={saveDetails}
+            onSaveDetailsChange={setSaveDetails}
             subtotal={subtotal}
             deliveryCharge={deliveryCharge}
             packingCharge={packingCharge}

@@ -24,6 +24,7 @@ import {
 import { ImageUpload } from "@/components/ui/image-upload";
 import { CategoryManagerDialog } from "./category-manager-dialog";
 import { BindingRangeEditor } from "./binding-range-editor";
+import { NumberStepper } from "@/components/ui/number-stepper";
 import { cn } from "@/lib/utils";
 
 interface ServiceFormModalProps {
@@ -116,7 +117,7 @@ function CategorySection({
       {selectedOptions.length > 0 && (
         <div className="space-y-2">
           {selectedOptions.map((selected) => {
-            const isPerPage = selected.pricePerPage > 0;
+            const isPerPage = selected.pricePerPage !== 0;
             return (
               <div
                 key={selected.value}
@@ -131,23 +132,23 @@ function CategorySection({
                           <span className="text-[10px] text-muted-foreground mr-1">
                             Base:
                           </span>
-                          <div className="relative w-16">
-                            <IndianRupee className="absolute left-1 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                            <Input
-                              type="number"
-                              className="h-6 pl-4 text-xs"
-                              value={selected.fixedPrice || 0}
-                              onChange={(e) =>
-                                updateOptionPrice(
-                                  id,
-                                  selected.value,
-                                  "perCopy",
-                                  Number(e.target.value),
-                                )
-                              }
-                              placeholder="Fixed"
-                            />
-                          </div>
+                          <NumberStepper
+                            size="sm"
+                            value={selected.fixedPrice || 0}
+                            onChange={(v) =>
+                              updateOptionPrice(
+                                id,
+                                selected.value,
+                                "perCopy",
+                                v,
+                              )
+                            }
+                            step={1}
+                            min={0}
+                            placeholder="₹"
+                            ariaLabel="Binding fixed price"
+                            className="w-24"
+                          />
                         </div>
                       </div>
                       {updateOptionRanges && (
@@ -189,30 +190,23 @@ function CategorySection({
                       </SelectContent>
                     </Select>
 
-                    <div className="relative w-24">
-                      <IndianRupee className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={
-                          isPerPage
-                            ? selected.pricePerPage
-                            : selected.pricePerCopy
-                        }
-                        onChange={(e) => {
-                          const type = isPerPage ? "perPage" : "perCopy";
-                          updateOptionPrice(
-                            id,
-                            selected.value,
-                            type,
-                            Number(e.target.value),
-                          );
-                        }}
-                        className="h-8 pl-6 text-xs rounded"
-                        placeholder="0"
-                      />
-                    </div>
+                    <NumberStepper
+                      size="sm"
+                      value={
+                        isPerPage
+                          ? selected.pricePerPage
+                          : selected.pricePerCopy
+                      }
+                      onChange={(v) => {
+                        const type = isPerPage ? "perPage" : "perCopy";
+                        updateOptionPrice(id, selected.value, type, v);
+                      }}
+                      step={1}
+                      min={category === "printSide" ? undefined : 0}
+                      placeholder="₹"
+                      ariaLabel="Option price"
+                      className="w-28"
+                    />
                   </>
                 )}
 
@@ -253,6 +247,7 @@ export function ServiceFormModal({
       name: "",
       image: null,
       basePricePerPage: 0,
+      basePriceRanges: [],
       customQuotation: false,
       printTypes: [],
       paperSizes: [],
@@ -312,10 +307,29 @@ export function ServiceFormModal({
 
     // Base price validation
     const basePrice = formData.basePricePerPage ?? 0;
+    const basePriceRanges = formData.basePriceRanges || [];
     if (basePrice < 0) {
       newErrors.basePricePerPage = "Price cannot be negative";
-    } else if (!formData.customQuotation && basePrice === 0) {
-      newErrors.basePricePerPage = "Base price is required for non-quotation services";
+    } else if (
+      !formData.customQuotation &&
+      basePrice === 0 &&
+      basePriceRanges.length === 0
+    ) {
+      newErrors.basePricePerPage =
+        "Base price (fallback or at least one price range) is required";
+    }
+
+    for (const range of basePriceRanges) {
+      if (range.min < 0 || range.max < 0 || range.price < 0) {
+        newErrors.basePricePerPage =
+          "Base price ranges cannot have negative values";
+        break;
+      }
+      if (range.min >= range.max) {
+        newErrors.basePricePerPage =
+          "Base price range min must be less than max";
+        break;
+      }
     }
 
     // Option validations (only for non-custom-quotation services)
@@ -334,15 +348,28 @@ export function ServiceFormModal({
       const optionCategories = [
         { key: "printTypes", label: "Print Types", data: printTypes },
         { key: "paperSizes", label: "Paper Sizes", data: paperSizes },
-        { key: "paperTypes", label: "Paper Types", data: (formData.paperTypes as OptionPricing[]) || [] },
-        { key: "gsmOptions", label: "GSM Options", data: (formData.gsmOptions as OptionPricing[]) || [] },
-        { key: "printSides", label: "Print Sides", data: (formData.printSides as OptionPricing[]) || [] },
+        {
+          key: "paperTypes",
+          label: "Paper Types",
+          data: (formData.paperTypes as OptionPricing[]) || [],
+        },
+        {
+          key: "gsmOptions",
+          label: "GSM Options",
+          data: (formData.gsmOptions as OptionPricing[]) || [],
+        },
+        {
+          key: "printSides",
+          label: "Print Sides",
+          data: (formData.printSides as OptionPricing[]) || [],
+        },
       ];
 
       for (const { key, label, data } of optionCategories) {
         for (const opt of data) {
           const price = (opt.pricePerPage || 0) + (opt.pricePerCopy || 0);
-          if (price < 0) {
+          // Only allow negative prices for printSides
+          if (price < 0 && key !== "printSides") {
             newErrors[key] = `${label} cannot have negative prices`;
             break;
           }
@@ -353,17 +380,20 @@ export function ServiceFormModal({
       const bindingOpts = (formData.bindingOptions as OptionPricing[]) || [];
       for (const opt of bindingOpts) {
         if ((opt.fixedPrice || 0) < 0) {
-          newErrors.bindingOptions = "Binding options cannot have negative prices";
+          newErrors.bindingOptions =
+            "Binding options cannot have negative prices";
           break;
         }
         if (opt.priceRanges) {
           for (const range of opt.priceRanges) {
             if (range.min < 0 || range.max < 0 || range.price < 0) {
-              newErrors.bindingOptions = "Binding price ranges cannot have negative values";
+              newErrors.bindingOptions =
+                "Binding price ranges cannot have negative values";
               break;
             }
             if (range.min >= range.max) {
-              newErrors.bindingOptions = "Binding range min must be less than max";
+              newErrors.bindingOptions =
+                "Binding range min must be less than max";
               break;
             }
           }
@@ -510,32 +540,56 @@ export function ServiceFormModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="basePrice" className="text-sm font-medium">
-              Base Price Per Page <span className="text-red-500">*</span>
-            </label>
+          <div className="space-y-3 border border-border/50 p-4 rounded-lg bg-muted/20">
+            <div className="flex justify-between items-center">
+              <label htmlFor="basePrice" className="text-sm font-medium">
+                Base Price Per Page <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] text-muted-foreground">
+                Fallback when no range matches
+              </span>
+            </div>
             <div className="relative">
-              <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <IndianRupee className="absolute left-12 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <NumberStepper
                 id="basePrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.basePricePerPage || ""}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    basePricePerPage: Number(e.target.value),
-                  });
+                value={formData.basePricePerPage || 0}
+                onChange={(v) => {
+                  setFormData({ ...formData, basePricePerPage: v });
                   if (errors.basePricePerPage)
                     setErrors({ ...errors, basePricePerPage: "" });
                 }}
+                step={1}
+                min={0}
+                placeholder="Fallback base price"
+                leftPadding="pl-5"
                 className={cn(
-                  "h-10 pl-9 rounded-lg",
+                  "w-full",
                   errors.basePricePerPage && "border-red-500",
                 )}
               />
             </div>
+
+            <div className="space-y-2 pt-2 border-t border-border/40">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Price Ranges by Page Count
+                </label>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Define per-page price based on total sheet count (e.g., 0–50
+                pages, 51–100 pages).
+              </p>
+              <BindingRangeEditor
+                ranges={formData.basePriceRanges || []}
+                onChange={(ranges) => {
+                  setFormData({ ...formData, basePriceRanges: ranges });
+                  if (errors.basePricePerPage)
+                    setErrors({ ...errors, basePricePerPage: "" });
+                }}
+              />
+            </div>
+
             {errors.basePricePerPage && (
               <p className="text-xs text-red-500">{errors.basePricePerPage}</p>
             )}
@@ -602,7 +656,9 @@ export function ServiceFormModal({
                     setManagerConfig={setManagerConfig}
                   />
                   {errors.printTypes && (
-                    <p className="text-xs text-red-500 mt-1">{errors.printTypes}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.printTypes}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -617,7 +673,9 @@ export function ServiceFormModal({
                     setManagerConfig={setManagerConfig}
                   />
                   {errors.paperSizes && (
-                    <p className="text-xs text-red-500 mt-1">{errors.paperSizes}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.paperSizes}
+                    </p>
                   )}
                 </div>
                 <CategorySection
@@ -663,7 +721,9 @@ export function ServiceFormModal({
                     updateOptionRanges={updateOptionRanges}
                   />
                   {errors.bindingOptions && (
-                    <p className="text-xs text-red-500 mt-1">{errors.bindingOptions}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.bindingOptions}
+                    </p>
                   )}
                 </div>
               </div>

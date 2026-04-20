@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useSpring, useTransform, MotionValue } from "framer-motion";
+import { motion, useSpring, useTransform, MotionValue, useInView, animate } from "framer-motion";
 import { Users, Briefcase, Calendar, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,35 +20,39 @@ interface CounterProps {
 const Counter = ({
   start = 0,
   end,
-  duration = end,
+  duration = 2,
   className,
   fontSize = 30,
   ...rest
 }: CounterProps) => {
-  const [value, setValue] = React.useState(start);
+  const [displayValue, setDisplayValue] = React.useState(start);
+  const ref = React.useRef(null);
+  const isInView = useInView(ref, { once: true });
 
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      if (value < end) {
-        setValue((prev) => prev + 1);
-      }
-    }, (duration / (end - start)) * 1000);
-
-    return () => clearInterval(interval);
-  }, [value, end, start, duration]);
+    if (isInView) {
+      const controls = animate(start, end, {
+        duration: duration,
+        onUpdate: (latest) => setDisplayValue(Math.round(latest)),
+        ease: "easeOut",
+      });
+      return () => controls.stop();
+    }
+  }, [isInView, start, end, duration]);
 
   return (
     <div
+      ref={ref}
       style={{ fontSize }}
       {...rest}
       className={cn(`flex overflow-hidden rounded px-2 leading-none text-primary font-bold`, className)}
     >
-      {value >= 100000 && <Digit place={100000} value={value} />}
-      {value >= 10000 && <Digit place={10000} value={value} />}
-      {value >= 1000 && <Digit place={1000} value={value} />}
-      {value >= 100 && <Digit place={100} value={value} />}
-      {value >= 10 && <Digit place={10} value={value} />}
-      <Digit place={1} value={value} />
+      {displayValue >= 100000 && <Digit place={100000} value={displayValue} />}
+      {displayValue >= 10000 && <Digit place={10000} value={displayValue} />}
+      {displayValue >= 1000 && <Digit place={1000} value={displayValue} />}
+      {displayValue >= 100 && <Digit place={100} value={displayValue} />}
+      {displayValue >= 10 && <Digit place={10} value={displayValue} />}
+      <Digit place={1} value={displayValue} />
     </div>
   );
 };
@@ -106,7 +110,8 @@ const StatCard = ({ icon, value, label, suffix = "", delay = 0 }: StatCardProps)
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
       transition={{ duration: 0.5, delay }}
       className="relative group"
     >
@@ -181,7 +186,8 @@ export default function StatsSection() {
       <div className="max-w-7xl mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >

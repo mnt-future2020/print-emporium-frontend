@@ -66,21 +66,40 @@ const ServiceCard = ({
         {/* Price Badge */}
         <div className="absolute top-4 right-4 px-3 py-2 rounded-xl bg-background/95 backdrop-blur-md shadow-lg border border-primary/10">
           <div className="flex items-center gap-1">
-            {service.customQuotation && service.basePricePerPage === 0 ? (
-              <span className="font-bold text-sm text-primary uppercase tracking-wider px-1">
-                Quote
-              </span>
-            ) : (
-              <>
-                <IndianRupee className="h-4 w-4 text-primary" />
-                <span className="font-bold text-lg text-foreground">
-                  {service.basePricePerPage}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  /{hasPerCopyPricing ? "copy" : "page"}
-                </span>
-              </>
-            )}
+            {(() => {
+              const ranges = service.basePriceRanges || [];
+              const displayPrice =
+                ranges.length > 0
+                  ? Math.min(...ranges.map((r) => r.price))
+                  : service.basePricePerPage;
+              if (
+                service.customQuotation &&
+                !displayPrice &&
+                ranges.length === 0
+              ) {
+                return (
+                  <span className="font-bold text-sm text-primary uppercase tracking-wider px-1">
+                    Quote
+                  </span>
+                );
+              }
+              return (
+                <>
+                  {ranges.length > 0 && (
+                    <span className="text-[10px] text-muted-foreground mr-0.5">
+                      From
+                    </span>
+                  )}
+                  <IndianRupee className="h-4 w-4 text-primary" />
+                  <span className="font-bold text-lg text-foreground">
+                    {displayPrice}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    /{hasPerCopyPricing ? "copy" : "page"}
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
 

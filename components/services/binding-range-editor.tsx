@@ -1,9 +1,8 @@
 "use client";
 
-import { Plus, Trash2, IndianRupee } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { NumberStepper } from "@/components/ui/number-stepper";
 
 export function BindingRangeEditor({
   ranges = [],
@@ -64,36 +63,31 @@ export function BindingRangeEditor({
             key={idx}
             className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 items-center group"
           >
-            <Input
-              type="number"
-              placeholder="0"
-              min={0}
+            <NumberStepper
               value={range.min}
-              onChange={(e) => updateRange(idx, "min", Number(e.target.value))}
-              className="h-9 px-3 text-sm"
-            />
-            <Input
-              type="number"
-              placeholder="∞"
+              onChange={(v) => updateRange(idx, "min", v)}
               min={0}
-              value={range.max === Infinity ? "" : range.max} // Handle Infinity conceptually if we supported it
-              onChange={(e) => updateRange(idx, "max", Number(e.target.value))}
-              className="h-9 px-3 text-sm"
+              step={1}
+              ariaLabel="Range min pages"
+              className="w-full"
             />
-
-            <div className="relative">
-              <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                type="number"
-                placeholder="0"
-                min={0}
-                value={range.price}
-                onChange={(e) =>
-                  updateRange(idx, "price", Number(e.target.value))
-                }
-                className="h-9 pl-8 pr-3 text-sm"
-              />
-            </div>
+            <NumberStepper
+              value={range.max === Infinity ? 0 : range.max}
+              onChange={(v) => updateRange(idx, "max", v)}
+              min={0}
+              step={1}
+              placeholder="∞"
+              ariaLabel="Range max pages"
+              className="w-full"
+            />
+            <NumberStepper
+              value={range.price}
+              onChange={(v) => updateRange(idx, "price", v)}
+              min={0}
+              step={1}
+              ariaLabel="Range price"
+              className="w-full"
+            />
 
             <Button
               variant="ghost"

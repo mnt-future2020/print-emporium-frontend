@@ -52,6 +52,14 @@ export function calculateItemPricing(
     totalPages = Math.ceil(pageCount / 2);
   }
 
+  // Resolve effective base price from ranges (fallback to basePricePerPage)
+  const effectiveBasePrice =
+    service.basePriceRanges && service.basePriceRanges.length > 0
+      ? (service.basePriceRanges.find(
+          (r) => totalPages >= r.min && totalPages <= r.max,
+        )?.price ?? service.basePricePerPage ?? 0)
+      : (service.basePricePerPage ?? 0);
+
   // Determine pricing type for each option (use whichever is > 0)
   const printTypePrice =
     printTypeOpt?.pricePerPage || printTypeOpt?.pricePerCopy || 0;
@@ -115,14 +123,16 @@ export function calculateItemPricing(
     (bindingOpt?.pricePerPage || 0) === 0;
 
   // Calculate price per page (sum of all per-page prices)
-  const pricePerPage =
-    service.basePricePerPage +
+  // Ensure the base total per page doesn't go below zero even with negative adjustments
+  const pricePerPage = Math.max(0,
+    effectiveBasePrice +
     (printTypeIsPerCopy ? 0 : printTypePrice) +
     (paperSizeIsPerCopy ? 0 : paperSizePrice) +
     (paperTypeIsPerCopy ? 0 : paperTypePrice) +
     (gsmIsPerCopy ? 0 : gsmPrice) +
     (printSideIsPerCopy ? 0 : printSidePrice) +
-    (bindingIsPerCopy ? 0 : bindingPrice);
+    (bindingIsPerCopy ? 0 : bindingPrice)
+  );
 
   // Calculate per-copy charges
   const pricePerCopy =
@@ -137,7 +147,7 @@ export function calculateItemPricing(
   const subtotal = pricePerPage * totalPages * copies + pricePerCopy * copies;
 
   return {
-    basePricePerPage: service.basePricePerPage,
+    basePricePerPage: effectiveBasePrice,
     printTypePrice,
     paperSizePrice,
     paperTypePrice,

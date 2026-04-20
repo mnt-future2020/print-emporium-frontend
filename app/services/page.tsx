@@ -132,22 +132,40 @@ export default async function ServicesPage() {
                   <div className="absolute top-4 right-4">
                     <div className="px-4 py-2 rounded-2xl bg-white/95 backdrop-blur-xl border border-white/20 shadow-xl">
                       <div className="flex items-center gap-1.5">
-                        {service.customQuotation &&
-                        service.basePricePerPage === 0 ? (
-                          <span className="font-black text-sm text-primary uppercase tracking-widest px-1">
-                            Request Quote
-                          </span>
-                        ) : (
-                          <>
-                            <IndianRupee className="h-4 w-4 text-primary" />
-                            <span className="font-black text-lg text-foreground">
-                              {service.basePricePerPage}
-                            </span>
-                            <span className="text-xs text-muted-foreground font-medium">
-                              /page
-                            </span>
-                          </>
-                        )}
+                        {(() => {
+                          const ranges = service.basePriceRanges || [];
+                          const displayPrice =
+                            ranges.length > 0
+                              ? Math.min(...ranges.map((r) => r.price))
+                              : service.basePricePerPage;
+                          const isQuote =
+                            service.customQuotation &&
+                            !displayPrice &&
+                            ranges.length === 0;
+                          if (isQuote) {
+                            return (
+                              <span className="font-black text-sm text-primary uppercase tracking-widest px-1">
+                                Request Quote
+                              </span>
+                            );
+                          }
+                          return (
+                            <>
+                              {ranges.length > 0 && (
+                                <span className="text-[10px] text-muted-foreground font-medium mr-0.5">
+                                  From
+                                </span>
+                              )}
+                              <IndianRupee className="h-4 w-4 text-primary" />
+                              <span className="font-black text-lg text-foreground">
+                                {displayPrice}
+                              </span>
+                              <span className="text-xs text-muted-foreground font-medium">
+                                /page
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

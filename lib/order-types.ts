@@ -61,7 +61,9 @@ export interface DeliveryInfo {
   fullName: string;
   phone: string;
   email: string;
+  doorNumber: string;
   address: string;
+  landmark?: string;
   city: string;
   state: string;
   pincode: string;
@@ -95,7 +97,9 @@ export const DEFAULT_DELIVERY_INFO: DeliveryInfo = {
   fullName: "",
   phone: "",
   email: "",
+  doorNumber: "",
   address: "",
+  landmark: "",
   city: "",
   state: "",
   pincode: "",

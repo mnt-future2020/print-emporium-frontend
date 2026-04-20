@@ -1,7 +1,6 @@
 "use client";
 
 import { OrderItem, ServiceConfiguration } from "@/lib/order-types";
-import { formatPrice } from "@/lib/pricing-utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -12,14 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ArrowLeft,
-  ArrowRight,
-  FileText,
-  Minus,
-  Plus,
-  IndianRupee,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConfigureStepProps {
@@ -30,7 +22,6 @@ interface ConfigureStepProps {
   onBack: () => void;
   onNext: () => void;
   canProceed: boolean;
-  subtotal: number;
 }
 
 export function ConfigureStep({
@@ -41,7 +32,6 @@ export function ConfigureStep({
   onBack,
   onNext,
   canProceed,
-  subtotal,
 }: ConfigureStepProps) {
   const activeItem = orderItems[activeItemIndex];
 
@@ -83,10 +73,10 @@ export function ConfigureStep({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* File Selector (for multiple files) */}
         {orderItems.length > 1 && (
-          <div className="lg:col-span-3">
+          <div>
             <Label className="text-sm font-medium mb-3 block">
               Select File to Configure
             </Label>
@@ -119,7 +109,7 @@ export function ConfigureStep({
         )}
 
         {/* Configuration Options */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2 flex-wrap">
               <FileText className="h-5 w-5 text-primary" />
@@ -145,26 +135,13 @@ export function ConfigureStep({
                       <SelectValue placeholder="Select print type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {service.printTypes.map((opt) => {
-                        const isPerCopy =
-                          (opt.pricePerCopy || 0) > 0 &&
-                          (opt.pricePerPage || 0) === 0;
-                        const price = isPerCopy
-                          ? opt.pricePerCopy
-                          : opt.pricePerPage;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <span className="capitalize">
-                              {opt.value.replace("-", " ")}
-                            </span>
-                            {price > 0 && (
-                              <span className="text-muted-foreground ml-2">
-                                (+₹{price}/{isPerCopy ? "copy" : "page"})
-                              </span>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
+                      {service.printTypes.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="capitalize">
+                            {opt.value.replace("-", " ")}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -182,24 +159,11 @@ export function ConfigureStep({
                       <SelectValue placeholder="Select paper size" />
                     </SelectTrigger>
                     <SelectContent>
-                      {service.paperSizes.map((opt) => {
-                        const isPerCopy =
-                          (opt.pricePerCopy || 0) > 0 &&
-                          (opt.pricePerPage || 0) === 0;
-                        const price = isPerCopy
-                          ? opt.pricePerCopy
-                          : opt.pricePerPage;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <span className="uppercase">{opt.value}</span>
-                            {price > 0 && (
-                              <span className="text-muted-foreground ml-2">
-                                (+₹{price}/{isPerCopy ? "copy" : "page"})
-                              </span>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
+                      {service.paperSizes.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="uppercase">{opt.value}</span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -217,26 +181,13 @@ export function ConfigureStep({
                       <SelectValue placeholder="Select paper type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {service.paperTypes.map((opt) => {
-                        const isPerCopy =
-                          (opt.pricePerCopy || 0) > 0 &&
-                          (opt.pricePerPage || 0) === 0;
-                        const price = isPerCopy
-                          ? opt.pricePerCopy
-                          : opt.pricePerPage;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <span className="capitalize">
-                              {opt.value.replace("-", " ")}
-                            </span>
-                            {price > 0 && (
-                              <span className="text-muted-foreground ml-2">
-                                (+₹{price}/{isPerCopy ? "copy" : "page"})
-                              </span>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
+                      {service.paperTypes.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="capitalize">
+                            {opt.value.replace("-", " ")}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -254,24 +205,11 @@ export function ConfigureStep({
                       <SelectValue placeholder="Select GSM" />
                     </SelectTrigger>
                     <SelectContent>
-                      {service.gsmOptions.map((opt) => {
-                        const isPerCopy =
-                          (opt.pricePerCopy || 0) > 0 &&
-                          (opt.pricePerPage || 0) === 0;
-                        const price = isPerCopy
-                          ? opt.pricePerCopy
-                          : opt.pricePerPage;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.value} GSM
-                            {price > 0 && (
-                              <span className="text-muted-foreground ml-2">
-                                (+₹{price}/{isPerCopy ? "copy" : "page"})
-                              </span>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
+                      {service.gsmOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.value} GSM
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -289,26 +227,13 @@ export function ConfigureStep({
                       <SelectValue placeholder="Select print side" />
                     </SelectTrigger>
                     <SelectContent>
-                      {service.printSides.map((opt) => {
-                        const isPerCopy =
-                          (opt.pricePerCopy || 0) > 0 &&
-                          (opt.pricePerPage || 0) === 0;
-                        const price = isPerCopy
-                          ? opt.pricePerCopy
-                          : opt.pricePerPage;
-                        return (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <span className="capitalize">
-                              {opt.value.replace("-", " ")}
-                            </span>
-                            {price > 0 && (
-                              <span className="text-muted-foreground ml-2">
-                                (+₹{price}/{isPerCopy ? "copy" : "page"})
-                              </span>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
+                      {service.printSides.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="capitalize">
+                            {opt.value.replace("-", " ")}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -362,51 +287,13 @@ export function ConfigureStep({
 
                           return pageCount >= min && pageCount <= derivedMax;
                         })
-                        .map((opt) => {
-                          // Calculate dynamic price
-                          const pageCount = activeItem.file.pageCount;
-                          const printSide = activeItem.configuration.printSide;
-                          const totalSheets =
-                            printSide === "double-side"
-                              ? Math.ceil(pageCount / 2)
-                              : pageCount;
-
-                          let price = opt.fixedPrice || 0;
-
-                          if (opt.priceRanges && opt.priceRanges.length > 0) {
-                            const match = opt.priceRanges.find(
-                              (r) =>
-                                totalSheets >= r.min && totalSheets <= r.max,
-                            );
-                            if (match) {
-                              price = match.price;
-                            }
-                          } else {
-                            // Legacy fallback
-                            price =
-                              (opt.fixedPrice || 0) > 0
-                                ? opt.fixedPrice || 0
-                                : Math.max(
-                                    opt.pricePerCopy || 0,
-                                    opt.pricePerPage || 0,
-                                  );
-                          }
-
-                          const isPerCopy = true; // Binding is generally per copy
-
-                          return (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              <span className="capitalize">
-                                {opt.value.replace("-", " ")}
-                              </span>
-                              {price > 0 && (
-                                <span className="text-muted-foreground ml-2">
-                                  (+₹{price}/{isPerCopy ? "copy" : "page"})
-                                </span>
-                              )}
-                            </SelectItem>
-                          );
-                        })}
+                        .map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <span className="capitalize">
+                              {opt.value.replace("-", " ")}
+                            </span>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -449,141 +336,6 @@ export function ConfigureStep({
           </div>
         </div>
 
-        {/* Price Summary Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-card rounded-xl border border-border p-6 sticky top-4">
-            <h3 className="font-semibold text-foreground mb-4">
-              Price Breakdown
-            </h3>
-
-            {/* Current Item Pricing */}
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Base Price</span>
-                <span>₹{activeItem.pricing.basePricePerPage}/page</span>
-              </div>
-              {activeItem.pricing.printTypePrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Print Type</span>
-                  <span>
-                    +₹{activeItem.pricing.printTypePrice}/
-                    {(service.printTypes.find(
-                      (opt) => opt.value === activeItem.configuration.printType,
-                    )?.pricePerCopy || 0) > 0
-                      ? "copy"
-                      : "page"}
-                  </span>
-                </div>
-              )}
-              {activeItem.pricing.paperSizePrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Paper Size</span>
-                  <span>
-                    +₹{activeItem.pricing.paperSizePrice}/
-                    {(service.paperSizes.find(
-                      (opt) => opt.value === activeItem.configuration.paperSize,
-                    )?.pricePerCopy || 0) > 0
-                      ? "copy"
-                      : "page"}
-                  </span>
-                </div>
-              )}
-              {activeItem.pricing.paperTypePrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Paper Type</span>
-                  <span>
-                    +₹{activeItem.pricing.paperTypePrice}/
-                    {(service.paperTypes.find(
-                      (opt) => opt.value === activeItem.configuration.paperType,
-                    )?.pricePerCopy || 0) > 0
-                      ? "copy"
-                      : "page"}
-                  </span>
-                </div>
-              )}
-              {activeItem.pricing.gsmPrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">GSM</span>
-                  <span>
-                    +₹{activeItem.pricing.gsmPrice}/
-                    {(service.gsmOptions.find(
-                      (opt) => opt.value === activeItem.configuration.gsm,
-                    )?.pricePerCopy || 0) > 0
-                      ? "copy"
-                      : "page"}
-                  </span>
-                </div>
-              )}
-              {activeItem.pricing.printSidePrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Print Side</span>
-                  <span>
-                    +₹{activeItem.pricing.printSidePrice}/
-                    {(service.printSides.find(
-                      (opt) => opt.value === activeItem.configuration.printSide,
-                    )?.pricePerCopy || 0) > 0
-                      ? "copy"
-                      : "page"}
-                  </span>
-                </div>
-              )}
-              {activeItem.pricing.bindingPrice > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Binding</span>
-                  <span>
-                    +₹{activeItem.pricing.bindingPrice}/
-                    {(service.bindingOptions.find(
-                      (opt) =>
-                        opt.value === activeItem.configuration.bindingOption,
-                    )?.pricePerPage || 0) > 0
-                      ? "page"
-                      : "copy"}
-                  </span>
-                </div>
-              )}
-
-              <div className="border-t border-border pt-3 mt-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price per page</span>
-                  <span className="font-medium">
-                    ₹{activeItem.pricing.pricePerPage}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Pages × Copies</span>
-                  <span>
-                    {activeItem.pricing.totalPages} ×{" "}
-                    {activeItem.pricing.copies}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-between font-medium">
-                <span>This File</span>
-                <span>{formatPrice(activeItem.pricing.subtotal)}</span>
-              </div>
-            </div>
-
-            {/* Total for all items */}
-            {orderItems.length > 1 && (
-              <div className="border-t border-border mt-4 pt-4">
-                <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                  <span>All Files ({orderItems.length})</span>
-                </div>
-              </div>
-            )}
-
-            <div className="border-t border-border mt-4 pt-4">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-foreground">Total</span>
-                <span className="text-xl font-bold text-primary flex items-center">
-                  <IndianRupee className="h-5 w-5" />
-                  {subtotal.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Navigation */}

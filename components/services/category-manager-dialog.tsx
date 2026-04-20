@@ -22,6 +22,7 @@ import {
 } from "@/lib/service-api";
 import { cn } from "@/lib/utils";
 import { BindingRangeEditor } from "./binding-range-editor";
+import { NumberStepper } from "@/components/ui/number-stepper";
 
 interface CategoryManagerDialogProps {
   category: string;
@@ -222,36 +223,34 @@ export function CategoryManagerDialog({
           <div className="flex flex-col gap-2">
             <Label>Base Pricing (Fallback)</Label>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
                   Start Page
                 </Label>
-                <Input
-                  type="number"
-                  min="0"
+                <NumberStepper
                   value={formData.minPages}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      minPages: Number(e.target.value),
-                    })
+                  onChange={(v) =>
+                    setFormData({ ...formData, minPages: v })
                   }
+                  min={0}
+                  step={1}
+                  ariaLabel="Start page"
+                  className="w-full"
                 />
               </div>
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
                   Base Price (₹)
                 </Label>
-                <Input
-                  type="number"
-                  min="0"
+                <NumberStepper
                   value={formData.fixedPrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      fixedPrice: Number(e.target.value),
-                    })
+                  onChange={(v) =>
+                    setFormData({ ...formData, fixedPrice: v })
                   }
+                  min={0}
+                  step={1}
+                  ariaLabel="Base price"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -307,35 +306,34 @@ export function CategoryManagerDialog({
               <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <IndianRupee className="absolute left-12 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <NumberStepper
                 id="optionPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0"
                 value={
                   pricingType === "perPage"
                     ? formData.pricePerPage
                     : formData.pricePerCopy
                 }
-                onChange={(e) => {
-                  const value = Number(e.target.value);
+                onChange={(v) => {
                   if (pricingType === "perPage") {
                     setFormData({
                       ...formData,
-                      pricePerPage: value,
+                      pricePerPage: v,
                       pricePerCopy: 0,
                     });
                   } else {
                     setFormData({
                       ...formData,
-                      pricePerCopy: value,
+                      pricePerCopy: v,
                       pricePerPage: 0,
                     });
                   }
                 }}
-                className="h-10 pl-9 rounded-lg font-mono"
+                step={1}
+                min={category === "printSide" ? undefined : 0}
+                leftPadding="pl-5"
+                ariaLabel="Option price"
+                className="w-full"
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -416,15 +414,22 @@ export function CategoryManagerDialog({
                         </>
                       ) : (
                         <>
-                          {option.pricePerPage! > 0
-                            ? `₹${option.pricePerPage}/page`
-                            : ""}
-                          {option.pricePerPage! > 0 && option.pricePerCopy! > 0
+                          {option.pricePerPage !== undefined && option.pricePerPage !== null && Number(option.pricePerPage) !== 0 && (
+                            <span className={Number(option.pricePerPage) < 0 ? "text-emerald-600 font-bold" : ""}>
+                              {Number(option.pricePerPage) < 0 ? `- ₹${Math.abs(Number(option.pricePerPage))}` : `₹${option.pricePerPage}`}
+                              /page
+                            </span>
+                          )}
+                          {(option.pricePerPage !== undefined && option.pricePerPage !== null && Number(option.pricePerPage) !== 0) && 
+                           (option.pricePerCopy !== undefined && option.pricePerCopy !== null && Number(option.pricePerCopy) !== 0)
                             ? " • "
                             : ""}
-                          {option.pricePerCopy! > 0
-                            ? `₹${option.pricePerCopy}/copy`
-                            : ""}
+                          {option.pricePerCopy !== undefined && option.pricePerCopy !== null && Number(option.pricePerCopy) !== 0 && (
+                            <span className={Number(option.pricePerCopy) < 0 ? "text-emerald-600 font-bold" : ""}>
+                              {Number(option.pricePerCopy) < 0 ? `- ₹${Math.abs(Number(option.pricePerCopy))}` : `₹${option.pricePerCopy}`}
+                              /copy
+                            </span>
+                          )}
                         </>
                       )}
                     </p>

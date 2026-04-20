@@ -146,13 +146,23 @@ export default function PricingPage() {
         flatChargesPerSet: 0,
       };
 
-    let totalPricePerPage = selectedService.basePricePerPage || 0;
+    const ranges = selectedService.basePriceRanges || [];
+    const matchedRange = ranges.find(
+      (r) => pageCount >= r.min && pageCount <= r.max,
+    );
+    const effectiveBasePrice =
+      matchedRange?.price ?? selectedService.basePricePerPage ?? 0;
+
+    let totalPricePerPage = effectiveBasePrice;
     let flatChargesPerSet = 0;
     const breakdown = [];
 
     breakdown.push({
-      label: "Base Processing Rate",
-      value: selectedService.basePricePerPage || 0,
+      label:
+        ranges.length > 0 && matchedRange
+          ? `Base Processing Rate (${matchedRange.min}-${matchedRange.max} pgs)`
+          : "Base Processing Rate",
+      value: effectiveBasePrice,
       isPerPage: true,
     });
 
@@ -231,8 +241,8 @@ export default function PricingPage() {
     }
 
     const totalForSingleCopy =
-      totalPricePerPage * pageCount + flatChargesPerSet;
-    const total = totalForSingleCopy * copies;
+      Math.max(0, totalPricePerPage) * pageCount + flatChargesPerSet;
+    const total = Math.max(0, totalForSingleCopy * copies);
 
     return {
       total,
@@ -543,8 +553,9 @@ export default function PricingPage() {
                                           </span>
                                           <div className="flex gap-1 ml-4">
                                             {opt.pricePerPage ? (
-                                              <span className="text-[9px] text-primary/70 font-bold">
-                                                +{formatPrice(opt.pricePerPage)}
+                                              <span className={cn("text-[9px] font-bold", opt.pricePerPage > 0 ? "text-primary/70" : "text-emerald-600")}>
+                                                {opt.pricePerPage > 0 ? "+" : "-"}
+                                                {formatPrice(Math.abs(opt.pricePerPage))}
                                                 /pg
                                               </span>
                                             ) : null}
