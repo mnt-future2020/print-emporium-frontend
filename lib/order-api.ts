@@ -108,7 +108,9 @@ export interface Order {
     subtotal: number;
     deliveryCharge: number;
     packingCharge: number;
+    discount?: number;
     total: number;
+    couponCode?: string | null;
   };
   status:
     | "pending"
@@ -119,7 +121,18 @@ export interface Order {
     | "delivered"
     | "cancelled";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
-  paymentMethod: "cod" | "online" | "upi";
+  paymentMethod:
+    | "cod"
+    | "online"
+    | "upi"
+    | "razorpay"
+    | "netbanking"
+    | "card"
+    | "wallet"
+    | "bank_transfer"
+    | "emi"
+    | "cardless_emi"
+    | "paylater";
   paymentId: string | null;
   trackingNumber: string | null;
   estimatedDelivery: string | null;
@@ -168,6 +181,27 @@ export const getOrderById = async (
 ): Promise<{ success: boolean; order: Order }> => {
   const response = await axiosInstance.get(`/api/orders/${id}`);
   return response.data;
+};
+
+/**
+ * Trigger a browser download of the invoice PDF for a paid order.
+ */
+export const downloadInvoice = async (
+  id: string,
+  orderNumber?: string,
+): Promise<void> => {
+  const response = await axiosInstance.get(`/api/orders/${id}/invoice`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Invoice-${orderNumber || id}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
 
 /**

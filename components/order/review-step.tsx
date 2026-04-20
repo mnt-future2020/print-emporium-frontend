@@ -576,7 +576,7 @@ export function ReviewStep({
                   window.localStorage.removeItem("pe:deliveryInfo");
                 } catch {}
               }
-              router.push(`/dashboard?tab=orders&order=${order.id}`);
+              router.push(`/order/success/${order.id}`);
             } else {
               toast.error(
                 "Payment verification failed. Please contact support.",
