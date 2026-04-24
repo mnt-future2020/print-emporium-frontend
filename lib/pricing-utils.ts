@@ -48,7 +48,7 @@ export function calculateItemPricing(
 
   // Calculate total pages based on print side (Sheet Count)
   let totalPages = pageCount;
-  if (configuration.printSide === "double-side") {
+  if (configuration.printSide.toLowerCase().includes("double")) {
     totalPages = Math.ceil(pageCount / 2);
   }
 
@@ -144,7 +144,7 @@ export function calculateItemPricing(
     (bindingIsPerCopy ? bindingPrice : 0);
 
   // Calculate subtotal: (price per page * total pages * copies) + (price per copy * copies)
-  const subtotal = pricePerPage * totalPages * copies + pricePerCopy * copies;
+  const subtotal = Math.round((pricePerPage * totalPages * copies + pricePerCopy * copies) * 100) / 100;
 
   return {
     basePricePerPage: effectiveBasePrice,
@@ -182,11 +182,11 @@ export function calculateOrderTotals(
   discount: number;
   total: number;
 } {
-  const subtotal = itemSubtotals.reduce((sum, item) => sum + item, 0);
-  const total = Math.max(
+  const subtotal = Math.round(itemSubtotals.reduce((sum, item) => sum + item, 0) * 100) / 100;
+  const total = Math.round(Math.max(
     0,
     subtotal + deliveryCharge + packingCharge - discount,
-  );
+  ) * 100) / 100;
   return { subtotal, packingCharge, discount, total };
 }
 
@@ -205,6 +205,15 @@ export function formatPrice(amount: number): string {
 interface Threshold {
   minAmount: number;
   charge: number;
+}
+
+interface PricingSettings {
+  isDeliveryEnabled?: boolean;
+  deliveryThresholds?: Threshold[];
+  regionalDeliveryChargeTN?: number;
+  regionalDeliveryChargeOutsideTN?: number;
+  isPackingEnabled?: boolean;
+  packingThresholds?: Threshold[];
 }
 
 /**
@@ -236,7 +245,7 @@ function calculateDynamicCharge(
 export function getDeliveryCharge(
   subtotal: number,
   state?: string,
-  settings?: any,
+  settings?: PricingSettings,
 ): number {
   if (settings && !settings.isDeliveryEnabled) return 0;
 
@@ -283,7 +292,7 @@ export function getDeliveryCharge(
 /**
  * Get packing charge based on order value and settings
  */
-export function getPackingCharge(subtotal: number, settings?: any): number {
+export function getPackingCharge(subtotal: number, settings?: PricingSettings): number {
   if (settings && !settings.isPackingEnabled) return 0;
 
   if (settings && settings.packingThresholds) {

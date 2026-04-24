@@ -51,8 +51,89 @@ import {
   verifyPayment,
 } from "@/lib/payment-api";
 
+interface OrderItem {
+  serviceName: string;
+  fileName?: string;
+  pageCount?: number;
+  file: {
+    name: string;
+    pageCount: number;
+    filePublicId?: string;
+    pdfPublicId?: string;
+  };
+  configuration: {
+    printType: string;
+    paperSize: string;
+    paperType: string;
+    gsm: number;
+    printSide: string;
+    copies: number;
+    bindingOption?: string;
+  };
+  pricing: {
+    pricePerPage: number;
+    basePricePerPage?: number;
+    pricePerCopy?: number;
+    totalPages: number;
+    copies: number;
+    subtotal: number;
+  };
+  fileUrl?: string | null;
+  pdfUrl?: string | null;
+}
+
+interface Order {
+  _id: string;
+  id?: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod?: string;
+  paymentId?: string;
+  trackingNumber?: string;
+  items: OrderItem[];
+  deliveryInfo: {
+    fullName: string;
+    phone: string;
+    email: string;
+    doorNumber: string;
+    address: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    deliveryNotes?: string;
+    scheduleDelivery?: boolean;
+    scheduledDate?: string;
+  };
+  pricing: {
+    subtotal: number;
+    deliveryCharge: number;
+    packingCharge: number;
+    discount: number;
+    total: number;
+    couponCode?: string;
+  };
+  couponCode?: string;
+  notes?: string;
+  userId?: { name: string; email: string };
+  createdAt: string;
+  invoiceEmailSent?: boolean;
+  estimatedDelivery?: string;
+}
+
+interface RazorpayResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+interface AxiosErrorShape {
+  response?: { data?: { message?: string; error?: string } };
+}
+
 interface OrdersTabProps {
-  user: any;
+  user: { role: string; name?: string; email?: string };
 }
 
 const statusConfig = {
@@ -97,14 +178,14 @@ const statusConfig = {
 };
 
 export function OrdersTab({ user }: OrdersTabProps) {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [trackingModalOpen, setTrackingModalOpen] = useState(false);
   const [statusUpdateData, setStatusUpdateData] = useState<{
     id: string;
@@ -129,7 +210,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
     }
   };
 
-  const handleReprintLabel = async (order: any) => {
+  const handleReprintLabel = async (order: Order) => {
     if (!order.trackingNumber) {
       toast.error("No tracking number available");
       return;
@@ -161,7 +242,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
       const endpoint = isAdminOrEmployee
         ? "/api/orders/admin/all"
         : "/api/orders/my-orders";
-      const params: any = { page, limit: 10 };
+      const params: Record<string, string | number> = { page, limit: 10 };
 
       if (statusFilter !== "all") params.status = statusFilter;
       if (search) params.search = search;
@@ -172,9 +253,9 @@ export function OrdersTab({ user }: OrdersTabProps) {
         setOrders(response.data.orders);
         setTotalPages(response.data.pagination.pages);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch orders:", err);
-      setError(err.response?.data?.message || "Failed to load orders");
+      setError((err as AxiosErrorShape).response?.data?.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -206,10 +287,10 @@ export function OrdersTab({ user }: OrdersTabProps) {
           setSelectedOrder({ ...selectedOrder, status: newStatus });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to update order status:", err);
       toast.error(
-        err.response?.data?.message || "Failed to update order status",
+        (err as AxiosErrorShape).response?.data?.message || "Failed to update order status",
       );
     }
   };
@@ -239,13 +320,33 @@ export function OrdersTab({ user }: OrdersTabProps) {
           });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to update order status:", err);
       toast.error(
-        err.response?.data?.message || "Failed to update order status",
+        (err as AxiosErrorShape).response?.data?.message || "Failed to update order status",
       );
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleMarkCashPaid = async (order: { _id: string; orderNumber: string }) => {
+    if (!confirm(`Mark order #${order.orderNumber} as paid by cash?`)) return;
+    try {
+      const response = await axiosInstance.put(
+        `/api/orders/admin/${order._id}/status`,
+        { paymentStatus: "paid", paymentMethod: "cash", status: "confirmed" },
+      );
+      if (response.data.success) {
+        toast.success(`Order #${order.orderNumber} marked as paid (cash)`);
+        fetchOrders();
+        if (selectedOrder?._id === order._id) {
+          setSelectedOrder({ ...selectedOrder, paymentStatus: "paid", paymentMethod: "cash", status: "confirmed" });
+        }
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosErr?.response?.data?.message || "Failed to update payment status");
     }
   };
 
@@ -254,7 +355,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
     setReorderConfirmOpen(true);
   };
 
-  const handleInitPayment = async (order: any) => {
+  const handleInitPayment = async (order: Order) => {
     try {
       // 1. Load Razorpay SDK
       const isLoaded = await loadRazorpayScript();
@@ -266,7 +367,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
       }
 
       // 2. Create Payment Order (Razorpay)
-      const paymentOrder = await createRazorpayOrder(order._id || order.id);
+      const paymentOrder = await createRazorpayOrder(order._id || order.id!);
       if (!paymentOrder.success) {
         toast.error(
           "Failed to initiate payment. Please retry from your order history.",
@@ -290,19 +391,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
         theme: {
           color: "#7c3aed",
         },
-        handler: async function (paymentResponse: any) {
+        handler: async function (paymentResponse: RazorpayResponse) {
           try {
             const verifyRes = await verifyPayment({
               razorpay_order_id: paymentResponse.razorpay_order_id,
               razorpay_payment_id: paymentResponse.razorpay_payment_id,
               razorpay_signature: paymentResponse.razorpay_signature,
-              orderId: order._id || order.id,
+              orderId: order._id || order.id!,
             });
 
             if (verifyRes.success) {
               toast.success("Payment successful! Order confirmed.");
               fetchOrders();
-              if (selectedOrder?._id === (order._id || order.id)) {
+              if (selectedOrder && selectedOrder._id === (order._id || order.id!)) {
                 setSelectedOrder({ ...selectedOrder, paymentStatus: "paid" });
               }
             } else {
@@ -325,7 +426,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
         },
       };
 
-      const paymentObject = new (window as any).Razorpay(options);
+      const paymentObject = new (window as unknown as { Razorpay: new (opts: object) => { open: () => void } }).Razorpay(options);
       paymentObject.open();
     } catch (err) {
       console.error("Payment initiation failed:", err);
@@ -348,9 +449,9 @@ export function OrdersTab({ user }: OrdersTabProps) {
         handleInitPayment(orderData);
         fetchOrders();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to reorder:", err);
-      toast.error(err.response?.data?.error || "Failed to reorder");
+      toast.error((err as AxiosErrorShape).response?.data?.error || "Failed to reorder");
       fetchOrders();
     } finally {
       setIsReordering(null);
@@ -358,7 +459,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
     }
   };
 
-  const handleDownloadInvoice = async (order: any) => {
+  const handleDownloadInvoice = async (order: Order) => {
     if (order.paymentStatus !== "paid") {
       toast.error("Invoice can only be generated for paid orders");
       return;
@@ -387,9 +488,9 @@ export function OrdersTab({ user }: OrdersTabProps) {
       window.URL.revokeObjectURL(url);
 
       toast.success("Invoice downloaded successfully");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to download invoice:", err);
-      toast.error(err.response?.data?.error || "Failed to download invoice");
+      toast.error((err as AxiosErrorShape).response?.data?.error || "Failed to download invoice");
     }
   };
 
@@ -509,7 +610,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
                             <Calendar className="h-3 w-3" />
                             Scheduled:{" "}
                             {new Date(
-                              order.estimatedDelivery,
+                              order.estimatedDelivery!,
                             ).toLocaleDateString()}
                           </span>
                         )}
@@ -610,6 +711,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
                             Pay Now
                           </Button>
                         )}
+                      {isAdminOrEmployee &&
+                        order.paymentStatus !== "paid" &&
+                        order.status !== "cancelled" && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleMarkCashPaid(order)}
+                            className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            <CreditCardIcon className="h-4 w-4 mr-2" />
+                            Cash Paid
+                          </Button>
+                        )}
                     </div>
                   </div>
 
@@ -662,7 +776,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
 
                   {/* Items Summary */}
                   <div className="space-y-2">
-                    {order.items?.slice(0, 2).map((item: any, idx: number) => (
+                    {order.items?.slice(0, 2).map((item: OrderItem, idx: number) => (
                       <div
                         key={idx}
                         className="flex flex-col sm:flex-row sm:items-center justify-between text-sm p-3 bg-muted/40 rounded-lg border border-border/50 gap-3"
@@ -906,6 +1020,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
                         Complete Payment
                       </Button>
                     )}
+                  {isAdminOrEmployee &&
+                    selectedOrder.paymentStatus !== "paid" &&
+                    selectedOrder.status !== "cancelled" && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleMarkCashPaid(selectedOrder)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                      >
+                        <CreditCardIcon className="h-4 w-4" />
+                        Mark Paid (Cash)
+                      </Button>
+                    )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1068,7 +1195,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
                       Order Items ({selectedOrder.items?.length || 0})
                     </h3>
                     <div className="space-y-3">
-                      {selectedOrder.items?.map((item: any, idx: number) => (
+                      {selectedOrder.items?.map((item: OrderItem, idx: number) => (
                         <div
                           key={idx}
                           className="p-4 bg-muted rounded-lg space-y-2"
