@@ -19,7 +19,7 @@ export default async function Home() {
   // Fetch services on server-side
   let services = [];
   try {
-    const res = await getAllServices("active");
+    const res = await getAllServices("active,coming-soon");
     if (res.success && res.data) {
       services = res.data;
     }

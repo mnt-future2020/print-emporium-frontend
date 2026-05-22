@@ -70,7 +70,7 @@ export interface Service {
   gsmOptions: OptionPricing[];
   printSides: OptionPricing[];
   bindingOptions: OptionPricing[];
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "coming-soon";
 }
 
 export const getAllServices = async (status?: string) => {

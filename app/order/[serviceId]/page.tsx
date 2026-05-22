@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getServiceById, getAllServices, Service } from "@/lib/service-api";
 import { OrderWizard } from "@/components/order/order-wizard";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
+import Link from "next/link";
 
 export default function OrderPage() {
   const params = useParams();
@@ -20,7 +21,7 @@ export default function OrderPage() {
   // Function to fetch all services (called only when user needs extra service)
   const loadAllServices = async (): Promise<Service[]> => {
     try {
-      const allServicesResponse = await getAllServices("active");
+      const allServicesResponse = await getAllServices("active,coming-soon");
       if (allServicesResponse.success && allServicesResponse.data) {
         return allServicesResponse.data;
       }
@@ -118,6 +119,33 @@ export default function OrderPage() {
           >
             Browse Services
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Block ordering for Coming Soon services
+  if (service.status === "coming-soon") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 mb-6">
+            <Clock className="h-8 w-8 text-amber-600" />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-light tracking-tight text-foreground mb-3">
+            {service.name} — Coming Soon
+          </h1>
+          <p className="text-muted-foreground font-light leading-relaxed mb-8">
+            This service is currently under preparation. Orders are not
+            available yet — please check back soon or browse our other
+            services.
+          </p>
+          <Link
+            href="/services"
+            className="inline-flex items-center gap-2 px-7 py-3 bg-primary text-primary-foreground rounded-md text-[15px] font-normal hover:opacity-90 transition-all duration-200"
+          >
+            Browse Other Services
+          </Link>
         </div>
       </div>
     );

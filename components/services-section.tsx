@@ -8,6 +8,7 @@ import {
   Upload,
   CheckCircle2,
   MessageSquare,
+  Clock,
 } from "lucide-react";
 import { Service } from "@/lib/service-api";
 import Link from "next/link";
@@ -103,10 +104,22 @@ const ServiceCard = ({
           </div>
         </div>
 
+        {/* Coming Soon Badge */}
+        {service.status === "coming-soon" && (
+          <div className="absolute top-4 left-4 z-20">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg">
+              <Clock className="w-3 h-3" />
+              Coming Soon
+            </div>
+          </div>
+        )}
+
         {/* Star Effect */}
-        <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <Star className="w-6 h-6 text-primary animate-pulse fill-primary" />
-        </div>
+        {service.status !== "coming-soon" && (
+          <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+            <Star className="w-6 h-6 text-primary animate-pulse fill-primary" />
+          </div>
+        )}
       </div>
 
       {/* Content Container */}
@@ -186,7 +199,18 @@ const ServiceCard = ({
         </div>
 
         {/* CTA Button */}
-        {service.customQuotation ? (
+        {service.status === "coming-soon" ? (
+          <Button
+            disabled
+            aria-disabled
+            className="w-full rounded-xl font-semibold bg-muted text-muted-foreground cursor-not-allowed border border-border"
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Clock className="w-4 h-4" />
+              Available Soon
+            </span>
+          </Button>
+        ) : service.customQuotation ? (
           <Link
             href={`/contact?subject=Inquiry for ${encodeURIComponent(service.name)}`}
             className="w-full"

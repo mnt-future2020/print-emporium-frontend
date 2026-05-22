@@ -626,7 +626,7 @@ export function ServiceFormModal({
               onValueChange={(val) =>
                 setFormData({
                   ...formData,
-                  status: val as "active" | "inactive",
+                  status: val as "active" | "inactive" | "coming-soon",
                 })
               }
             >
@@ -635,9 +635,15 @@ export function ServiceFormModal({
               </SelectTrigger>
               <SelectContent className="rounded-lg">
                 <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="coming-soon">Coming Soon</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Active:</span> Visible and bookable.{" "}
+              <span className="font-medium">Coming Soon:</span> Visible but customers can&apos;t place orders.{" "}
+              <span className="font-medium">Inactive:</span> Hidden from customers.
+            </p>
           </div>
 
           {!formData.customQuotation && (

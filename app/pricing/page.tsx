@@ -65,7 +65,7 @@ export default function PricingPage() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await getAllServices("active");
+        const response = await getAllServices("active,coming-soon");
         if (response.success) {
           setServices(response.data);
           if (response.data.length > 0) {

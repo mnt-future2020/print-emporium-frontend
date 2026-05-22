@@ -33,7 +33,7 @@ export function ServicesListTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
+    "all" | "active" | "inactive" | "coming-soon"
   >("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | undefined>(
@@ -101,6 +101,7 @@ export function ServicesListTab() {
   const stats = {
     total: services.length,
     active: services.filter((s) => s.status === "active").length,
+    comingSoon: services.filter((s) => s.status === "coming-soon").length,
     inactive: services.filter((s) => s.status === "inactive").length,
     avgPrice:
       services.length > 0
@@ -114,7 +115,7 @@ export function ServicesListTab() {
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
@@ -136,6 +137,19 @@ export function ServicesListTab() {
                 {stats.active}
               </p>
               <p className="text-xs text-muted-foreground">Active</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/10 rounded-lg">
+              <div className="h-4 w-4 bg-amber-500 rounded-full" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-amber-600">
+                {stats.comingSoon}
+              </p>
+              <p className="text-xs text-muted-foreground">Coming Soon</p>
             </div>
           </div>
         </Card>
@@ -178,16 +192,17 @@ export function ServicesListTab() {
           </div>
           <Select
             value={statusFilter}
-            onValueChange={(value: "all" | "active" | "inactive") =>
+            onValueChange={(value: "all" | "active" | "inactive" | "coming-soon") =>
               setStatusFilter(value)
             }
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="coming-soon">Coming Soon</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
@@ -264,10 +279,16 @@ export function ServicesListTab() {
                     className={
                       service.status === "active"
                         ? "bg-green-500/90"
+                        : service.status === "coming-soon"
+                        ? "bg-amber-500/90"
                         : "bg-red-500/90"
                     }
                   >
-                    {service.status === "active" ? "Active" : "Inactive"}
+                    {service.status === "active"
+                      ? "Active"
+                      : service.status === "coming-soon"
+                      ? "Coming Soon"
+                      : "Inactive"}
                   </Badge>
                 </div>
               </div>

@@ -11,6 +11,7 @@ import {
   FileText,
   Upload,
   MessageCircle,
+  Clock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export default async function ServicesPage() {
   let hasError = false;
 
   try {
-    const res = await getAllServices("active");
+    const res = await getAllServices("active,coming-soon");
     if (res.success && res.data) {
       services = res.data;
     } else {
@@ -102,10 +103,16 @@ export default async function ServicesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service) => (
+            {services.map((service) => {
+              const isComingSoon = service.status === "coming-soon";
+              return (
               <div
                 key={service._id}
-                className="group relative bg-card rounded-3xl border border-border/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2 flex flex-col h-full"
+                className={`group relative bg-card rounded-3xl border border-border/50 overflow-hidden transition-all duration-500 flex flex-col h-full ${
+                  isComingSoon
+                    ? "opacity-95"
+                    : "hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2"
+                }`}
               >
                 {/* Image Section with Gradient Overlay */}
                 <div className="relative aspect-4/3 overflow-hidden bg-linear-to-br from-muted to-muted/50">
@@ -125,6 +132,16 @@ export default async function ServicesPage() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/5 to-primary/10">
                       <Layers className="h-20 w-20 text-primary/20" />
+                    </div>
+                  )}
+
+                  {/* Coming Soon Top-Left Badge */}
+                  {isComingSoon && (
+                    <div className="absolute top-4 left-4 z-10">
+                      <Badge className="bg-amber-500 hover:bg-amber-500 text-white border-0 px-3 py-1.5 text-xs font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        Coming Soon
+                      </Badge>
                     </div>
                   )}
 
@@ -353,7 +370,18 @@ export default async function ServicesPage() {
                   </div>
 
                   {/* Action Button */}
-                  {service.customQuotation ? (
+                  {isComingSoon ? (
+                    <Button
+                      disabled
+                      aria-disabled
+                      className="w-full rounded-2xl h-14 text-base font-bold bg-muted text-muted-foreground cursor-not-allowed border border-border"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Available Soon
+                      </span>
+                    </Button>
+                  ) : service.customQuotation ? (
                     <Link
                       href={`/contact?subject=Inquiry for ${encodeURIComponent(service.name)}`}
                       className="w-full"
@@ -377,7 +405,8 @@ export default async function ServicesPage() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

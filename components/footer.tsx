@@ -20,7 +20,7 @@ export default function Footer() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await getAllServices("active");
+        const res = await getAllServices("active,coming-soon");
         if (res.success && res.data) {
           setServices(
             res.data.slice(0, 5).map((s: Service) => ({
