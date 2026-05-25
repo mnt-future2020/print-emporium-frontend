@@ -114,7 +114,49 @@ function CategorySection({
         </SelectContent>
       </Select>
 
-      {selectedOptions.length > 0 && (
+      {selectedOptions.length > 0 && category === "bindingOption" && (
+        <div className="flex flex-wrap gap-2">
+          {selectedOptions.map((selected) => {
+            const hasRanges =
+              selected.priceRanges && selected.priceRanges.length > 0;
+            const displayPrice = hasRanges
+              ? Math.min(...selected.priceRanges!.map((r) => r.price))
+              : selected.fixedPrice || 0;
+            const prefix = hasRanges ? "From " : "";
+            return (
+              <div
+                key={selected.value}
+                className="inline-flex items-center gap-2 pl-3 pr-1 py-1 rounded-full bg-primary/5 border border-primary/15 text-sm group/chip hover:border-primary/30 transition-colors"
+              >
+                <span className="font-medium text-foreground capitalize">
+                  {selected.value.replace(/-/g, " ")}
+                </span>
+                <span className="text-xs text-muted-foreground font-light">
+                  · {prefix}
+                  <span className="font-medium text-foreground">
+                    ₹{displayPrice}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const opt = categoryOptions?.find(
+                      (o) => o.value === selected.value,
+                    );
+                    if (opt) toggleOption(id, opt);
+                  }}
+                  className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label={`Remove ${selected.value}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedOptions.length > 0 && category !== "bindingOption" && (
         <div className="space-y-2">
           {selectedOptions.map((selected) => {
             const isPerPage = selected.pricePerPage !== 0;
@@ -123,92 +165,48 @@ function CategorySection({
                 key={selected.value}
                 className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border/30"
               >
-                <span className="text-sm flex-1">
-                  {category === "bindingOption" ? (
-                    <div className="flex flex-col w-full">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{selected.value}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground mr-1">
-                            Base:
-                          </span>
-                          <NumberStepper
-                            size="sm"
-                            value={selected.fixedPrice || 0}
-                            onChange={(v) =>
-                              updateOptionPrice(
-                                id,
-                                selected.value,
-                                "perCopy",
-                                v,
-                              )
-                            }
-                            step={1}
-                            min={0}
-                            placeholder="₹"
-                            ariaLabel="Binding fixed price"
-                            className="w-24"
-                          />
-                        </div>
-                      </div>
-                      {updateOptionRanges && (
-                        <BindingRangeEditor
-                          ranges={selected.priceRanges || []}
-                          onChange={(ranges) =>
-                            updateOptionRanges(id, selected.value, ranges)
-                          }
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    selected.value
-                  )}
-                </span>
+                <span className="text-sm flex-1">{selected.value}</span>
 
-                {category !== "bindingOption" && (
-                  <>
-                    <Select
-                      defaultValue={isPerPage ? "perPage" : "perCopy"}
-                      onValueChange={(type) => {
-                        const amount = isPerPage
-                          ? selected.pricePerPage
-                          : selected.pricePerCopy;
-                        updateOptionPrice(
-                          id,
-                          selected.value,
-                          type as "perPage" | "perCopy",
-                          amount,
-                        );
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-20 text-xs rounded">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="perPage">Per Page</SelectItem>
-                        <SelectItem value="perCopy">Per Copy</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <Select
+                  defaultValue={isPerPage ? "perPage" : "perCopy"}
+                  onValueChange={(type) => {
+                    const amount = isPerPage
+                      ? selected.pricePerPage
+                      : selected.pricePerCopy;
+                    updateOptionPrice(
+                      id,
+                      selected.value,
+                      type as "perPage" | "perCopy",
+                      amount,
+                    );
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-20 text-xs rounded">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="perPage">Per Page</SelectItem>
+                    <SelectItem value="perCopy">Per Copy</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                    <NumberStepper
-                      size="sm"
-                      value={
-                        isPerPage
-                          ? selected.pricePerPage
-                          : selected.pricePerCopy
-                      }
-                      onChange={(v) => {
-                        const type = isPerPage ? "perPage" : "perCopy";
-                        updateOptionPrice(id, selected.value, type, v);
-                      }}
-                      step={1}
-                      min={category === "printSide" ? undefined : 0}
-                      placeholder="₹"
-                      ariaLabel="Option price"
-                      className="w-28"
-                    />
-                  </>
-                )}
+                <NumberStepper
+                  size="sm"
+                  value={
+                    isPerPage
+                      ? selected.pricePerPage
+                      : selected.pricePerCopy
+                  }
+                  onChange={(v) => {
+                    const type = isPerPage ? "perPage" : "perCopy";
+                    updateOptionPrice(id, selected.value, type, v);
+                  }}
+                  step={1}
+                  min={category === "printSide" ? undefined : 0}
+                  placeholder="₹"
+                  ariaLabel="Option price"
+                  className="w-28"
+                />
 
                 <Button
                   type="button"
@@ -376,29 +374,7 @@ export function ServiceFormModal({
         }
       }
 
-      // Validate binding options
-      const bindingOpts = (formData.bindingOptions as OptionPricing[]) || [];
-      for (const opt of bindingOpts) {
-        if ((opt.fixedPrice || 0) < 0) {
-          newErrors.bindingOptions =
-            "Binding options cannot have negative prices";
-          break;
-        }
-        if (opt.priceRanges) {
-          for (const range of opt.priceRanges) {
-            if (range.min < 0 || range.max < 0 || range.price < 0) {
-              newErrors.bindingOptions =
-                "Binding price ranges cannot have negative values";
-              break;
-            }
-            if (range.min >= range.max) {
-              newErrors.bindingOptions =
-                "Binding range min must be less than max";
-              break;
-            }
-          }
-        }
-      }
+      // Binding options are managed globally — no per-service validation needed.
     }
 
     setErrors(newErrors);
@@ -726,11 +702,11 @@ export function ServiceFormModal({
                     setManagerConfig={setManagerConfig}
                     updateOptionRanges={updateOptionRanges}
                   />
-                  {errors.bindingOptions && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.bindingOptions}
-                    </p>
-                  )}
+                  <p className="text-[11px] text-muted-foreground mt-1.5 font-light">
+                    Pricing comes from the global binding manager — edits there
+                    apply instantly to every service that has this binding
+                    selected.
+                  </p>
                 </div>
               </div>
             </div>

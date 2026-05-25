@@ -38,7 +38,7 @@ import { toast } from "sonner";
 import { TrackingModal } from "./tracking-modal";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { MarkAsShippedDialog } from "@/components/admin/mark-as-shipped-dialog";
-import { downloadOrderSlip, downloadShippingLabel } from "@/lib/pdf-service";
+import { downloadOrderSlip, downloadShippingLabel, downloadOrderFilesMerged } from "@/lib/pdf-service";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -200,13 +200,44 @@ export function OrdersTab({ user }: OrdersTabProps) {
   // PDF & Shipping State
   const [markAsShippedOpen, setMarkAsShippedOpen] = useState(false);
 
+  // Track which download is in progress (one at a time per button group).
+  // Key format: `${type}:${orderId}` — lets us disable a single button while it's running.
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const isDownloading = (key: string) => downloadingKey === key;
+  const startDownload = (key: string) => setDownloadingKey(key);
+  const endDownload = () => setDownloadingKey(null);
+
   const handleDownloadOrderSlip = async (orderId: string, size: string) => {
-    toast.info(`Generating ${size} Order Slip...`);
-    const result = await downloadOrderSlip(orderId, size);
-    if (result.success) {
-      toast.success("Order Slip downloaded");
-    } else {
-      toast.error("Failed to download Order Slip");
+    const key = `slip:${orderId}`;
+    if (downloadingKey) return;
+    startDownload(key);
+    const toastId = toast.loading(`Generating ${size} Order Slip...`);
+    try {
+      const result = await downloadOrderSlip(orderId, size);
+      if (result.success) {
+        toast.success("Order Slip downloaded", { id: toastId });
+      } else {
+        toast.error("Failed to download Order Slip", { id: toastId });
+      }
+    } finally {
+      endDownload();
+    }
+  };
+
+  const handleDownloadMergedPDF = async (order: Order, size: string = "A4") => {
+    const key = `merged:${order._id}`;
+    if (downloadingKey) return;
+    startDownload(key);
+    const toastId = toast.loading("Preparing merged PDF — this may take a moment for large files...");
+    try {
+      const result = await downloadOrderFilesMerged(order._id, order.orderNumber, size);
+      if (result.success) {
+        toast.success("Merged PDF downloaded", { id: toastId });
+      } else {
+        toast.error("Failed to download merged PDF", { id: toastId });
+      }
+    } finally {
+      endDownload();
     }
   };
 
@@ -215,16 +246,23 @@ export function OrdersTab({ user }: OrdersTabProps) {
       toast.error("No tracking number available");
       return;
     }
-    toast.info("Generating Shipping Label...");
-    const result = await downloadShippingLabel(order._id, {
-      awb: order.trackingNumber,
-      courier: "",
-      size: "4x6",
-    });
-    if (result.success) {
-      toast.success("Label downloaded");
-    } else {
-      toast.error("Failed to download Label");
+    const key = `label:${order._id}`;
+    if (downloadingKey) return;
+    startDownload(key);
+    const toastId = toast.loading("Generating Shipping Label...");
+    try {
+      const result = await downloadShippingLabel(order._id, {
+        awb: order.trackingNumber,
+        courier: "",
+        size: "4x6",
+      });
+      if (result.success) {
+        toast.success("Label downloaded", { id: toastId });
+      } else {
+        toast.error("Failed to download Label", { id: toastId });
+      }
+    } finally {
+      endDownload();
     }
   };
 
@@ -464,11 +502,11 @@ export function OrdersTab({ user }: OrdersTabProps) {
       toast.error("Invoice can only be generated for paid orders");
       return;
     }
-
+    const key = `invoice:${order._id}`;
+    if (downloadingKey) return;
+    startDownload(key);
+    const toastId = toast.loading(`Generating ${size.toUpperCase()} invoice...`);
     try {
-      toast.info(`Generating ${size.toUpperCase()} invoice...`);
-
-      // Download invoice from backend with requested size
       const response = await axiosInstance.get(
         `/api/orders/${order._id}/invoice`,
         {
@@ -477,7 +515,6 @@ export function OrdersTab({ user }: OrdersTabProps) {
         },
       );
 
-      // Create blob and download
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -488,9 +525,14 @@ export function OrdersTab({ user }: OrdersTabProps) {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success(`${size.toUpperCase()} invoice downloaded`);
+      toast.success(`${size.toUpperCase()} invoice downloaded`, { id: toastId });
     } catch (err: unknown) {
-      toast.error((err as AxiosErrorShape).response?.data?.error || "Failed to download invoice");
+      toast.error(
+        (err as AxiosErrorShape).response?.data?.error || "Failed to download invoice",
+        { id: toastId },
+      );
+    } finally {
+      endDownload();
     }
   };
 
@@ -933,10 +975,23 @@ export function OrdersTab({ user }: OrdersTabProps) {
                     <>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <FileText className="h-4 w-4" />
-                            Order Slip
-                            <ChevronDown className="h-3 w-3 opacity-50" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            disabled={isDownloading(`slip:${selectedOrder._id}`)}
+                          >
+                            {isDownloading(`slip:${selectedOrder._id}`) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                            {isDownloading(`slip:${selectedOrder._id}`)
+                              ? "Generating..."
+                              : "Order Slip"}
+                            {!isDownloading(`slip:${selectedOrder._id}`) && (
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -967,6 +1022,27 @@ export function OrdersTab({ user }: OrdersTabProps) {
                         </DropdownMenuContent>
                       </DropdownMenu>
 
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleDownloadMergedPDF(selectedOrder, "A4")}
+                        disabled={isDownloading(`merged:${selectedOrder._id}`)}
+                        title="Download a single PDF containing the order slip plus every customer file"
+                      >
+                        {isDownloading(`merged:${selectedOrder._id}`) ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Preparing...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            PDF File
+                          </>
+                        )}
+                      </Button>
+
                       {(selectedOrder.status === "processing" ||
                         selectedOrder.status === "printing" ||
                         selectedOrder.status === "confirmed") && (
@@ -988,9 +1064,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
                             size="sm"
                             className="gap-2"
                             onClick={() => handleReprintLabel(selectedOrder)}
+                            disabled={isDownloading(`label:${selectedOrder._id}`)}
                           >
-                            <Printer className="h-4 w-4" />
-                            Label
+                            {isDownloading(`label:${selectedOrder._id}`) ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Printer className="h-4 w-4" />
+                                Label
+                              </>
+                            )}
                           </Button>
                         )}
                     </>
@@ -999,10 +1085,23 @@ export function OrdersTab({ user }: OrdersTabProps) {
                   {selectedOrder.paymentStatus === "paid" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Download className="h-4 w-4" />
-                          Invoice
-                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={isDownloading(`invoice:${selectedOrder._id}`)}
+                        >
+                          {isDownloading(`invoice:${selectedOrder._id}`) ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          {isDownloading(`invoice:${selectedOrder._id}`)
+                            ? "Generating..."
+                            : "Invoice"}
+                          {!isDownloading(`invoice:${selectedOrder._id}`) && (
+                            <ChevronDown className="h-3 w-3 opacity-50" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

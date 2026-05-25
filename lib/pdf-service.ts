@@ -38,6 +38,31 @@ export const downloadOrderSlip = async (
 };
 
 /**
+ * Download merged PDF: Order Slip + every customer-uploaded PDF as a single file.
+ */
+export const downloadOrderFilesMerged = async (
+  orderId: string,
+  orderNumber: string,
+  size: string = "A4",
+) => {
+  try {
+    const response = await axiosInstance.get(
+      `/api/pdf/order-files-merged/${orderId}`,
+      {
+        params: { size },
+        responseType: "blob",
+      },
+    );
+    const filename = `Order-${orderNumber}-Merged.pdf`;
+    triggerDownload(new Blob([response.data]), filename);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to download merged PDF:", error);
+    return { success: false, error };
+  }
+};
+
+/**
  * Download Shipping Label PDF
  */
 export const downloadShippingLabel = async (

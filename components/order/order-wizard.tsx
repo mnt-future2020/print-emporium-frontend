@@ -106,36 +106,26 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
   const handleFileUploaded = useCallback(
     (file: UploadedFile, selectedService?: Service) => {
       const serviceToUse = selectedService || selectedServiceForUpload;
+      // Customer must manually pick each option — start with blank selections.
+      // copies is the only sensible default (1).
+      const blankConfig = {
+        ...DEFAULT_CONFIGURATION,
+        printType: "",
+        paperSize: "",
+        paperType: "",
+        gsm: "",
+        printSide: "",
+        bindingOption: "",
+        copies: 1,
+      };
       const newItem: OrderItem = {
         id: generateId(),
         serviceId: serviceToUse._id || "",
         serviceName: serviceToUse.name,
         service: serviceToUse,
         file,
-        configuration: {
-          ...DEFAULT_CONFIGURATION,
-          printType: serviceToUse.printTypes[0]?.value || "",
-          paperSize: serviceToUse.paperSizes[0]?.value || "",
-          paperType: serviceToUse.paperTypes[0]?.value || "",
-          gsm: serviceToUse.gsmOptions[0]?.value || "",
-          printSide: serviceToUse.printSides[0]?.value || "",
-          bindingOption: serviceToUse.bindingOptions[0]?.value || "",
-          copies: 1,
-        },
-        pricing: calculateItemPricing(
-          serviceToUse,
-          {
-            ...DEFAULT_CONFIGURATION,
-            printType: serviceToUse.printTypes[0]?.value || "",
-            paperSize: serviceToUse.paperSizes[0]?.value || "",
-            paperType: serviceToUse.paperTypes[0]?.value || "",
-            gsm: serviceToUse.gsmOptions[0]?.value || "",
-            printSide: serviceToUse.printSides[0]?.value || "",
-            bindingOption: serviceToUse.bindingOptions[0]?.value || "",
-            copies: 1,
-          },
-          file.pageCount,
-        ),
+        configuration: blankConfig,
+        pricing: calculateItemPricing(serviceToUse, blankConfig, file.pageCount),
       };
 
       setOrderItems((prev) => [...prev, newItem]);
@@ -197,12 +187,22 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     orderItems.length > 0 &&
     orderItems.every((item) => item.file.status === "ready");
 
-  const canProceedToReview = orderItems.every(
-    (item) =>
-      item.configuration.printType &&
-      item.configuration.paperSize &&
-      item.configuration.copies > 0,
-  );
+  // Require the customer to explicitly pick every option before continuing.
+  // Binding is optional only if the service has no binding options at all.
+  const canProceedToReview = orderItems.every((item) => {
+    const c = item.configuration;
+    const svc = item.service;
+    const bindingRequired = (svc.bindingOptions?.length || 0) > 0;
+    return (
+      !!c.printType &&
+      !!c.paperSize &&
+      !!c.paperType &&
+      !!c.gsm &&
+      !!c.printSide &&
+      (!bindingRequired || !!c.bindingOption) &&
+      c.copies > 0
+    );
+  });
 
   return (
     <div className="min-h-screen bg-background">

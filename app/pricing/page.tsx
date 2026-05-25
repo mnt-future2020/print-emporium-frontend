@@ -228,7 +228,21 @@ export default function PricingPage() {
       (o) => o.value === config.bindingOption,
     );
     if (bindingOption) {
-      if (bindingOption.fixedPrice) {
+      // 1. Prefer matching price range (based on sheet count)
+      const matchedBindingRange =
+        bindingOption.priceRanges?.find(
+          (r) => sheetCount >= r.min && sheetCount <= r.max,
+        ) ?? null;
+
+      if (matchedBindingRange) {
+        flatChargesPerSet += matchedBindingRange.price;
+        breakdown.push({
+          label: `Binding (${bindingOption.value}) (${matchedBindingRange.min}-${matchedBindingRange.max} pgs)`,
+          value: matchedBindingRange.price,
+          isFixed: true,
+        });
+      } else if (bindingOption.fixedPrice) {
+        // 2. Fallback to fixed price
         flatChargesPerSet += bindingOption.fixedPrice;
         breakdown.push({
           label: `Binding (${bindingOption.value})`,
@@ -236,6 +250,8 @@ export default function PricingPage() {
           isFixed: true,
         });
       }
+
+      // 3. Per-page binding rate (rare, additive)
       if (bindingOption.pricePerPage) {
         totalPricePerPage += bindingOption.pricePerPage;
         breakdown.push({

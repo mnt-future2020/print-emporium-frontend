@@ -697,16 +697,47 @@ export function ReviewStep({
                       </span>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-border/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                      <span className="text-xs sm:text-sm text-muted-foreground">
-                        {item.pricing.totalPages} pages × {item.pricing.copies}{" "}
-                        {item.pricing.copies > 1 ? "copies" : "copy"} × ₹
-                        {item.pricing.pricePerPage}/page
-                      </span>
-                      <span className="font-bold text-foreground text-base sm:text-lg">
-                        {formatPrice(item.pricing.subtotal)}
-                      </span>
-                    </div>
+                    {(() => {
+                      const pages = item.pricing.totalPages;
+                      const copies = item.pricing.copies;
+                      const perPage = item.pricing.pricePerPage;
+                      const perCopy = item.pricing.pricePerCopy || 0;
+                      const pagesCost = perPage * pages * copies;
+                      return (
+                        <div className="mt-4 pt-3 border-t border-border/50 space-y-1.5">
+                          <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                            <span>
+                              {pages} {pages > 1 ? "pages" : "page"} × {copies}{" "}
+                              {copies > 1 ? "copies" : "copy"} × ₹{perPage}/page
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {formatPrice(pagesCost)}
+                            </span>
+                          </div>
+                          {perCopy > 0 && (
+                            <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                              <span>
+                                Binding{" "}
+                                {item.configuration.bindingOption &&
+                                  `(${item.configuration.bindingOption.replace(/-/g, " ")})`}{" "}
+                                × {copies} {copies > 1 ? "copies" : "copy"}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {formatPrice(perCopy * copies)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pt-1.5 border-t border-border/30">
+                            <span className="text-xs sm:text-sm font-medium text-foreground">
+                              Item total
+                            </span>
+                            <span className="font-bold text-foreground text-base sm:text-lg">
+                              {formatPrice(item.pricing.subtotal)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
