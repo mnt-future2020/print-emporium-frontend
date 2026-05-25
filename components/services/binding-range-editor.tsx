@@ -34,22 +34,7 @@ export function BindingRangeEditor({
 
   return (
     <div className="mt-2 space-y-3">
-      {ranges.length > 0 && (
-        <div className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 px-1">
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            Min Pgs
-          </label>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            Max Pgs
-          </label>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            Price (₹)
-          </label>
-          <div className="w-8" />
-        </div>
-      )}
-
-      <div className="space-y-2">
+      <div className="space-y-3">
         {ranges.length === 0 && (
           <div className="text-center py-4 border border-dashed rounded-lg bg-muted/30">
             <p className="text-xs text-muted-foreground">
@@ -61,42 +46,68 @@ export function BindingRangeEditor({
         {ranges.map((range, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 items-center group"
+            className="rounded-lg border border-border bg-muted/20 p-3 space-y-2.5 group"
           >
-            <NumberStepper
-              value={range.min}
-              onChange={(v) => updateRange(idx, "min", v)}
-              min={0}
-              step={1}
-              ariaLabel="Range min pages"
-              className="w-full"
-            />
-            <NumberStepper
-              value={range.max === Infinity ? 0 : range.max}
-              onChange={(v) => updateRange(idx, "max", v)}
-              min={0}
-              step={1}
-              placeholder="∞"
-              ariaLabel="Range max pages"
-              className="w-full"
-            />
-            <NumberStepper
-              value={range.price}
-              onChange={(v) => updateRange(idx, "price", v)}
-              min={0}
-              step={1}
-              ariaLabel="Range price"
-              className="w-full"
-            />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Range {idx + 1}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => removeRange(idx)}
+                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                aria-label="Remove range"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => removeRange(idx)}
-              className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  Min Pgs
+                </label>
+                <NumberStepper
+                  value={range.min}
+                  onChange={(v) => updateRange(idx, "min", v)}
+                  min={0}
+                  step={1}
+                  size="sm"
+                  ariaLabel="Range min pages"
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  Max Pgs
+                </label>
+                <NumberStepper
+                  value={range.max === Infinity ? 0 : range.max}
+                  onChange={(v) => updateRange(idx, "max", v)}
+                  min={0}
+                  step={1}
+                  size="sm"
+                  placeholder="∞"
+                  ariaLabel="Range max pages"
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  Price (₹)
+                </label>
+                <NumberStepper
+                  value={range.price}
+                  onChange={(v) => updateRange(idx, "price", v)}
+                  min={0}
+                  step={1}
+                  size="sm"
+                  ariaLabel="Range price"
+                  className="w-full"
+                />
+              </div>
+            </div>
           </div>
         ))}
       </div>
