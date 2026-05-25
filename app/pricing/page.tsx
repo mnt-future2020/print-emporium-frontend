@@ -146,9 +146,15 @@ export default function PricingPage() {
         flatChargesPerSet: 0,
       };
 
+    // Account for double-side: 2 source pages = 1 printed sheet
+    const isDoubleSide = (config.printSide || "")
+      .toLowerCase()
+      .includes("double");
+    const sheetCount = isDoubleSide ? Math.ceil(pageCount / 2) : pageCount;
+
     const ranges = selectedService.basePriceRanges || [];
     const matchedRange = ranges.find(
-      (r) => pageCount >= r.min && pageCount <= r.max,
+      (r) => sheetCount >= r.min && sheetCount <= r.max,
     );
     const effectiveBasePrice =
       matchedRange?.price ?? selectedService.basePricePerPage ?? 0;
@@ -241,15 +247,17 @@ export default function PricingPage() {
     }
 
     const totalForSingleCopy =
-      Math.max(0, totalPricePerPage) * pageCount + flatChargesPerSet;
-    const total = Math.max(0, totalForSingleCopy * copies);
+      Math.max(0, totalPricePerPage) * sheetCount + flatChargesPerSet;
+    const total =
+      Math.round(Math.max(0, totalForSingleCopy * copies) * 100) / 100;
 
     return {
       total,
       breakdown,
-      totalForSingleCopy,
+      totalForSingleCopy: Math.round(totalForSingleCopy * 100) / 100,
       totalPricePerPage,
       flatChargesPerSet,
+      sheetCount,
     };
   };
 

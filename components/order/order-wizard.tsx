@@ -208,27 +208,25 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/services")}
-              className="shrink-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-foreground">Place Order</h1>
-              <p className="text-sm text-muted-foreground">
-                {orderItems.length === 0
-                  ? service.name
-                  : orderItems.length === 1
-                    ? orderItems[0].serviceName
-                    : `${orderItems.length} services selected`}
-              </p>
-            </div>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <button
+            type="button"
+            onClick={() => router.push("/services")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3 "
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to services
+          </button>
+          <h1 className="text-2xl md:text-3xl  tracking-tight text-foreground">
+            Place Order
+          </h1>
+          <p className="text-sm text-muted-foreground  mt-1">
+            {orderItems.length === 0
+              ? service.name
+              : orderItems.length === 1
+                ? orderItems[0].serviceName
+                : `${orderItems.length} services selected`}
+          </p>
         </div>
       </div>
 

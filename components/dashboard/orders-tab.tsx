@@ -459,19 +459,20 @@ export function OrdersTab({ user }: OrdersTabProps) {
     }
   };
 
-  const handleDownloadInvoice = async (order: Order) => {
+  const handleDownloadInvoice = async (order: Order, size: string = "a4") => {
     if (order.paymentStatus !== "paid") {
       toast.error("Invoice can only be generated for paid orders");
       return;
     }
 
     try {
-      toast.info("Generating invoice...");
+      toast.info(`Generating ${size.toUpperCase()} invoice...`);
 
-      // Download invoice from backend
+      // Download invoice from backend with requested size
       const response = await axiosInstance.get(
         `/api/orders/${order._id}/invoice`,
         {
+          params: { size },
           responseType: "blob",
         },
       );
@@ -481,15 +482,14 @@ export function OrdersTab({ user }: OrdersTabProps) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Invoice-${order.orderNumber}.pdf`;
+      link.download = `Invoice-${order.orderNumber}-${size.toUpperCase()}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success("Invoice downloaded successfully");
+      toast.success(`${size.toUpperCase()} invoice downloaded`);
     } catch (err: unknown) {
-      console.error("Failed to download invoice:", err);
       toast.error((err as AxiosErrorShape).response?.data?.error || "Failed to download invoice");
     }
   };
@@ -997,15 +997,37 @@ export function OrdersTab({ user }: OrdersTabProps) {
                   )}
 
                   {selectedOrder.paymentStatus === "paid" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadInvoice(selectedOrder)}
-                      className="gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      Invoice
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Download className="h-4 w-4" />
+                          Invoice
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadInvoice(selectedOrder, "a4")}
+                        >
+                          Download A4
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadInvoice(selectedOrder, "a5")}
+                        >
+                          Download A5
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadInvoice(selectedOrder, "letter")}
+                        >
+                          Download Letter
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadInvoice(selectedOrder, "legal")}
+                        >
+                          Download Legal
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                   {!isAdminOrEmployee &&
                     selectedOrder.paymentStatus !== "paid" &&

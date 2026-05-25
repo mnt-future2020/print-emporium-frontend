@@ -47,6 +47,7 @@ import {
 import { validateCoupon, getActiveCoupons, Coupon } from "@/lib/coupon-api";
 import { Ticket, Info as LucideInfo, ChevronRight, Gift } from "lucide-react";
 import { useEffect } from "react";
+import { CouponSuccessDialog } from "./coupon-success-dialog";
 
 // Component for printing (hidden from screen)
 interface PrintableOrderSummaryProps {
@@ -189,6 +190,7 @@ export function ReviewStep({
   const [couponCode, setCouponCode] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponSuccessOpen, setCouponSuccessOpen] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([]);
 
@@ -408,7 +410,7 @@ export function ReviewStep({
       const response = await validateCoupon(couponCode, subtotal);
       if (response.success) {
         setAppliedCoupon(response.data);
-        toast.success(`Coupon "${response.data.code}" applied!`);
+        setCouponSuccessOpen(true); // open success popup only on real success
       } else {
         setCouponError(response.message || "Invalid coupon code");
       }
@@ -1383,6 +1385,16 @@ export function ReviewStep({
         orderItems={orderItems}
         deliveryInfo={deliveryInfo}
         total={total}
+      />
+
+      {/* Coupon success popup */}
+      <CouponSuccessDialog
+        open={couponSuccessOpen}
+        onClose={() => setCouponSuccessOpen(false)}
+        couponCode={appliedCoupon?.code || ""}
+        discount={appliedCoupon?.discount || 0}
+        isFreeDelivery={isFreeDeliveryApplied}
+        newTotal={finalTotal}
       />
 
       {/* Navigation */}
