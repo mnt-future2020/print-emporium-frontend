@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, IndianRupee, Settings, Plus, Trash2 } from "lucide-react";
+import {
+  X,
+  Save,
+  IndianRupee,
+  Settings,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Clock,
+  EyeOff,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,41 +126,58 @@ function CategorySection({
       </Select>
 
       {selectedOptions.length > 0 && category === "bindingOption" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {selectedOptions.map((selected) => {
-            const hasRanges =
-              selected.priceRanges && selected.priceRanges.length > 0;
-            const displayPrice = hasRanges
-              ? Math.min(...selected.priceRanges!.map((r) => r.price))
-              : selected.fixedPrice || 0;
-            const prefix = hasRanges ? "From " : "";
+            const ranges = selected.priceRanges || [];
+            const hasRanges = ranges.length > 0;
             return (
               <div
                 key={selected.value}
-                className="inline-flex items-center gap-2 pl-3 pr-1 py-1 rounded-full bg-primary/5 border border-primary/15 text-sm group/chip hover:border-primary/30 transition-colors"
+                className="relative rounded-lg border border-primary/15 bg-primary/5 p-3 hover:border-primary/30 transition-colors"
               >
-                <span className="font-medium text-foreground capitalize">
-                  {selected.value.replace(/-/g, " ")}
-                </span>
-                <span className="text-xs text-muted-foreground font-light">
-                  · {prefix}
-                  <span className="font-medium text-foreground">
-                    ₹{displayPrice}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium text-foreground capitalize leading-tight">
+                    {selected.value.replace(/-/g, " ")}
                   </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const opt = categoryOptions?.find(
-                      (o) => o.value === selected.value,
-                    );
-                    if (opt) toggleOption(id, opt);
-                  }}
-                  className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  aria-label={`Remove ${selected.value}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const opt = categoryOptions?.find(
+                        (o) => o.value === selected.value,
+                      );
+                      if (opt) toggleOption(id, opt);
+                    }}
+                    className="shrink-0 -mt-1 -mr-1 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    aria-label={`Remove ${selected.value}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  {hasRanges &&
+                    ranges.map((r, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-[11px] text-muted-foreground font-light"
+                      >
+                        <span>
+                          {r.min}–{r.max} pgs
+                        </span>
+                        <span className="font-medium text-foreground tabular-nums">
+                          ₹{r.price}
+                        </span>
+                      </div>
+                    ))}
+                  <div className="flex items-center justify-between text-[11px] font-light">
+                    <span className="text-muted-foreground">
+                      {hasRanges ? "Beyond ranges" : "Fixed price"}
+                    </span>
+                    <span className="font-medium text-foreground tabular-nums">
+                      ₹{selected.fixedPrice || 0}
+                    </span>
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -399,9 +427,11 @@ export function ServiceFormModal({
       } else {
         toast.error(res.message || "Failed to save");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Save error:", error);
-      toast.error(error.message || "Failed to save");
+      const message =
+        error instanceof Error ? error.message : "Failed to save";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -593,33 +623,121 @@ export function ServiceFormModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="status" className="text-sm font-medium">
-              Status
-            </label>
-            <Select
-              value={formData.status || "active"}
-              onValueChange={(val) =>
-                setFormData({
-                  ...formData,
-                  status: val as "active" | "inactive" | "coming-soon",
-                })
-              }
+          {/* Service Status — visual radio-card selector */}
+          <div className="space-y-3">
+            <div>
+              <label
+                htmlFor="status"
+                className="text-sm font-semibold text-foreground"
+              >
+                Service Status
+              </label>
+              <p className="text-xs text-muted-foreground font-light mt-0.5">
+                Control the availability and visibility of this service.
+              </p>
+            </div>
+
+            <div
+              role="radiogroup"
+              aria-labelledby="status"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
             >
-              <SelectTrigger id="status" className="h-10 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-lg">
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="coming-soon">Coming Soon</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Active:</span> Visible and bookable.{" "}
-              <span className="font-medium">Coming Soon:</span> Visible but customers can&apos;t place orders.{" "}
-              <span className="font-medium">Inactive:</span> Hidden from customers.
-            </p>
+              {(
+                [
+                  {
+                    value: "active",
+                    label: "Active",
+                    description: "Live and bookable by customers.",
+                    Icon: CheckCircle2,
+                    iconColor: "text-emerald-600",
+                    iconBg: "bg-emerald-50 dark:bg-emerald-500/10",
+                    selectedBorder: "border-emerald-500",
+                    selectedBg: "bg-emerald-50/40 dark:bg-emerald-500/5",
+                    selectedRing: "ring-emerald-500/30",
+                  },
+                  {
+                    value: "coming-soon",
+                    label: "Coming Soon",
+                    description: "Visible but orders are disabled.",
+                    Icon: Clock,
+                    iconColor: "text-amber-600",
+                    iconBg: "bg-amber-50 dark:bg-amber-500/10",
+                    selectedBorder: "border-amber-500",
+                    selectedBg: "bg-amber-50/40 dark:bg-amber-500/5",
+                    selectedRing: "ring-amber-500/30",
+                  },
+                  {
+                    value: "inactive",
+                    label: "Inactive",
+                    description: "Hidden from customers entirely.",
+                    Icon: EyeOff,
+                    iconColor: "text-slate-500",
+                    iconBg: "bg-slate-100 dark:bg-slate-500/10",
+                    selectedBorder: "border-slate-400",
+                    selectedBg: "bg-slate-50/60 dark:bg-slate-500/5",
+                    selectedRing: "ring-slate-400/30",
+                  },
+                ] as const
+              ).map((opt) => {
+                const selected = (formData.status || "active") === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        status: opt.value as
+                          | "active"
+                          | "inactive"
+                          | "coming-soon",
+                      })
+                    }
+                    className={cn(
+                      "relative text-left rounded-lg border p-3 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                      selected
+                        ? cn(
+                            opt.selectedBorder,
+                            opt.selectedBg,
+                            "ring-2",
+                            opt.selectedRing,
+                          )
+                        : "border-border bg-card hover:border-primary/30 hover:bg-muted/30",
+                    )}
+                  >
+                    {selected && (
+                      <span
+                        className={cn(
+                          "absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full",
+                          opt.iconBg,
+                        )}
+                      >
+                        <Check
+                          className={cn("h-3 w-3", opt.iconColor)}
+                          strokeWidth={3}
+                        />
+                      </span>
+                    )}
+                    <div
+                      className={cn(
+                        "inline-flex items-center justify-center w-8 h-8 rounded-md mb-2",
+                        opt.iconBg,
+                      )}
+                    >
+                      <opt.Icon className={cn("h-4 w-4", opt.iconColor)} />
+                    </div>
+                    <div className="text-sm font-medium text-foreground">
+                      {opt.label}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-light leading-snug mt-0.5">
+                      {opt.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {!formData.customQuotation && (

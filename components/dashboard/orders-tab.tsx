@@ -1028,7 +1028,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
                         className="gap-2"
                         onClick={() => handleDownloadMergedPDF(selectedOrder, "A4")}
                         disabled={isDownloading(`merged:${selectedOrder._id}`)}
-                        title="Download a single PDF containing the order slip plus every customer file"
+                        title="Download one PDF containing the order slip + every customer file, ready for printing"
                       >
                         {isDownloading(`merged:${selectedOrder._id}`) ? (
                           <>
@@ -1037,8 +1037,8 @@ export function OrdersTab({ user }: OrdersTabProps) {
                           </>
                         ) : (
                           <>
-                            <FileText className="h-4 w-4" />
-                            PDF File
+                            <Package className="h-4 w-4" />
+                            Print Pack
                           </>
                         )}
                       </Button>
