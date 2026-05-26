@@ -254,38 +254,17 @@ export function ConfigureStep({
                       <SelectItem value="none">No Binding</SelectItem>
                       {service.bindingOptions
                         .filter((opt) => {
-                          // New Logic: Check priceRanges first
-                          if (opt.priceRanges && opt.priceRanges.length > 0) {
-                            // Optionally filter if page count is strictly outside all ranges?
-                            // For now, we'll allow it and let it fall back to fixedPrice (or show 0)
-                            return true;
-                          }
-
-                          // Legacy Logic: Filter based on minPages for multi-option ranges
+                          // Available if Start Page (minPages) is met OR pageCount
+                          // falls inside any defined price range. This matches admin
+                          // intuition — a range covering 1-50 makes the binding
+                          // selectable from page 1 regardless of Start Page fallback.
                           const pageCount = activeItem.file.pageCount;
-                          const min = opt.minPages || 0;
-
-                          // If we have ranged options defined as separate entries, use smart filtering
-                          // Get all distinct start pages (minPages) sorted ascending
-                          const startPages = Array.from(
-                            new Set(
-                              service.bindingOptions.map(
-                                (o) => o.minPages || 0,
-                              ),
-                            ),
-                          ).sort((a, b) => a - b);
-
-                          // Find the next start page cutoff
-                          const currentIdx = startPages.indexOf(min);
-                          const nextStartPage = startPages[currentIdx + 1];
-
-                          // Determine max for this option
-                          const derivedMax =
-                            nextStartPage !== undefined
-                              ? nextStartPage - 1
-                              : Infinity;
-
-                          return pageCount >= min && pageCount <= derivedMax;
+                          const startPageMet =
+                            !opt.minPages || pageCount >= opt.minPages;
+                          const inAnyRange = (opt.priceRanges || []).some(
+                            (r) => pageCount >= r.min && pageCount <= r.max,
+                          );
+                          return startPageMet || inAnyRange;
                         })
                         .map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>

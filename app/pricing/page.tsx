@@ -85,26 +85,19 @@ export default function PricingPage() {
     return services.find((s) => s._id === selectedServiceId);
   }, [services, selectedServiceId]);
 
-  // Dynamic Binding Filtering
+  // A binding is available if EITHER the Start Page (minPages) threshold is met,
+  // OR the current page count falls inside any of its defined price ranges.
+  // This matches admin intuition — if a range covers pages 1-50, it should be
+  // selectable starting at page 1, even when the fallback Start Page is higher.
   const availableBindingOptions = useMemo(() => {
     if (!selectedService) return [];
-
-    // 1. Get all options where minPages is satisfied by current pageCount
-    const satisfiedOptions = (selectedService.bindingOptions || []).filter(
-      (opt) => !opt.minPages || pageCount >= opt.minPages,
-    );
-
-    if (satisfiedOptions.length === 0) return [];
-
-    // 2. Find the highest minPages threshold among satisfied options
-    const maxSatisfiedMinPages = Math.max(
-      ...satisfiedOptions.map((opt) => opt.minPages || 0),
-    );
-
-    // 3. Return only options that match this highest threshold
-    return satisfiedOptions.filter(
-      (opt) => (opt.minPages || 0) === maxSatisfiedMinPages,
-    );
+    return (selectedService.bindingOptions || []).filter((opt) => {
+      const startPageMet = !opt.minPages || pageCount >= opt.minPages;
+      const inAnyRange = (opt.priceRanges || []).some(
+        (r) => pageCount >= r.min && pageCount <= r.max,
+      );
+      return startPageMet || inAnyRange;
+    });
   }, [selectedService, pageCount]);
 
   // Reset config when service changes
@@ -146,11 +139,9 @@ export default function PricingPage() {
         flatChargesPerSet: 0,
       };
 
-    // Account for double-side: 2 source pages = 1 printed sheet
-    const isDoubleSide = (config.printSide || "")
-      .toLowerCase()
-      .includes("double");
-    const sheetCount = isDoubleSide ? Math.ceil(pageCount / 2) : pageCount;
+    // Single-side and double-side both bill on the actual page count.
+    // Any double-side discount comes from the printSide per-page rate.
+    const sheetCount = pageCount;
 
     const ranges = selectedService.basePriceRanges || [];
     const matchedRange = ranges.find(
@@ -565,7 +556,23 @@ export default function PricingPage() {
                                     <SelectValue placeholder="Select one..." />
                                   </SelectTrigger>
                                   <SelectContent className="rounded-xl border-border bg-white shadow-lg p-1">
-                                    {cat.options.map((opt) => (
+                                    {cat.options.map((opt) => {
+                                      // For binding, show the price that ACTUALLY applies
+                                      // based on the current page count.
+                                      const isBinding = cat.id === "bindingOption";
+                                      const matchedRange =
+                                        isBinding && opt.priceRanges
+                                          ? opt.priceRanges.find(
+                                              (r) =>
+                                                pageCount >= r.min &&
+                                                pageCount <= r.max,
+                                            )
+                                          : undefined;
+                                      const bindingApplied = matchedRange
+                                        ? matchedRange.price
+                                        : opt.fixedPrice || 0;
+
+                                      return (
                                       <SelectItem
                                         key={opt.value}
                                         value={opt.value}
@@ -583,8 +590,14 @@ export default function PricingPage() {
                                                 /pg
                                               </span>
                                             ) : null}
-                                            {opt.fixedPrice ||
-                                            opt.pricePerCopy ? (
+                                            {isBinding ? (
+                                              bindingApplied > 0 ? (
+                                                <span className="text-[9px] text-emerald-600 font-bold">
+                                                  +{formatPrice(bindingApplied)}
+                                                </span>
+                                              ) : null
+                                            ) : opt.fixedPrice ||
+                                              opt.pricePerCopy ? (
                                               <span className="text-[9px] text-emerald-600 font-bold">
                                                 +
                                                 {formatPrice(
@@ -597,7 +610,8 @@ export default function PricingPage() {
                                           </div>
                                         </div>
                                       </SelectItem>
-                                    ))}
+                                      );
+                                    })}
                                   </SelectContent>
                                 </Select>
                               </div>

@@ -46,11 +46,10 @@ export function calculateItemPricing(
     configuration.bindingOption,
   );
 
-  // Calculate total pages based on print side (Sheet Count)
-  let totalPages = pageCount;
-  if (configuration.printSide.toLowerCase().includes("double")) {
-    totalPages = Math.ceil(pageCount / 2);
-  }
+  // Total pages used for pricing = original page count, regardless of print side.
+  // Single-side and double-side both bill on the actual page count. Any double-side
+  // discount comes from the printSide option's per-page rate (e.g., -₹2/pg).
+  const totalPages = pageCount;
 
   // Resolve effective base price from ranges (fallback to basePricePerPage)
   const effectiveBasePrice =
