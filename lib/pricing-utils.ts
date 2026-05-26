@@ -207,7 +207,7 @@ interface Threshold {
   charge: number;
 }
 
-interface PricingSettings {
+export interface PricingSettings {
   isDeliveryEnabled?: boolean;
   deliveryThresholds?: Threshold[];
   regionalDeliveryChargeTN?: number;

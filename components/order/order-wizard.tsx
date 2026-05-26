@@ -16,6 +16,7 @@ import {
   getDeliveryCharge,
   getPackingCharge,
   calculateOrderTotals,
+  type PricingSettings,
 } from "@/lib/pricing-utils";
 import { axiosInstance } from "@/lib/axios";
 import { generateId } from "@/lib/file-utils";
@@ -24,7 +25,6 @@ import { FileUploadStep } from "./file-upload-step";
 import { ConfigureStep } from "./configure-step";
 import { ReviewStep } from "./review-step";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 interface OrderWizardProps {
@@ -77,7 +77,7 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
   const [selectedServiceForUpload, setSelectedServiceForUpload] =
     useState<Service>(service);
   const [allServices, setAllServices] = useState<Service[]>([service]);
-  const [pricingSettings, setPricingSettings] = useState<any>(null);
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings | undefined>(undefined);
 
   // Fetch pricing settings on mount
   useEffect(() => {
@@ -187,21 +187,19 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     orderItems.length > 0 &&
     orderItems.every((item) => item.file.status === "ready");
 
-  // Require the customer to explicitly pick every option before continuing.
-  // Binding is optional only if the service has no binding options at all.
+  // Require the customer to explicitly pick every option THE SERVICE OFFERS.
+  // If a service has no paperTypes (for example), we don't require paperType.
   const canProceedToReview = orderItems.every((item) => {
     const c = item.configuration;
     const svc = item.service;
-    const bindingRequired = (svc.bindingOptions?.length || 0) > 0;
-    return (
-      !!c.printType &&
-      !!c.paperSize &&
-      !!c.paperType &&
-      !!c.gsm &&
-      !!c.printSide &&
-      (!bindingRequired || !!c.bindingOption) &&
-      c.copies > 0
-    );
+    const need = (arr?: { value: string }[]) => (arr?.length || 0) > 0;
+    if (need(svc.printTypes) && !c.printType) return false;
+    if (need(svc.paperSizes) && !c.paperSize) return false;
+    if (need(svc.paperTypes) && !c.paperType) return false;
+    if (need(svc.gsmOptions) && !c.gsm) return false;
+    if (need(svc.printSides) && !c.printSide) return false;
+    if (need(svc.bindingOptions) && !c.bindingOption) return false;
+    return c.copies > 0;
   });
 
   return (
