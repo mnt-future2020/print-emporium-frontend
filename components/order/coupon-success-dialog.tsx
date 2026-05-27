@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/pricing-utils";
 import { useEffect } from "react";
+import { SparkleBurst } from "./sparkle-burst";
 
 interface CouponSuccessDialogProps {
   open: boolean;
@@ -59,20 +60,23 @@ export function CouponSuccessDialog({
               <div className="h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400" />
 
               <div className="p-6 sm:p-8 text-center">
-                {/* Animated success icon */}
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{
-                    delay: 0.05,
-                    type: "spring",
-                    stiffness: 320,
-                    damping: 18,
-                  }}
-                  className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 mb-4"
-                >
-                  <CheckCircle2 className="h-8 w-8 text-emerald-600" strokeWidth={2} />
-                </motion.div>
+                {/* Animated success icon with custom sparkle burst */}
+                <div className="relative inline-flex items-center justify-center mb-4">
+                  <SparkleBurst active={open} />
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      delay: 0.05,
+                      type: "spring",
+                      stiffness: 320,
+                      damping: 18,
+                    }}
+                    className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10"
+                  >
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" strokeWidth={2} />
+                  </motion.div>
+                </div>
 
                 <h2 className="text-xl font-light tracking-tight text-foreground mb-2">
                   Coupon Applied
@@ -89,8 +93,11 @@ export function CouponSuccessDialog({
                   </span>
                 </div>
 
-                {/* Savings summary */}
-                <div
+                {/* Savings summary with subtle slide-up and bounce micro-interactions */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 20 }}
                   className="rounded-md border border-[#e5edf5] dark:border-border bg-muted/30 px-5 py-4 mb-5 text-left"
                   style={{
                     boxShadow:
@@ -102,20 +109,30 @@ export function CouponSuccessDialog({
                       <TrendingDown className="h-3 w-3" />
                       You saved
                     </span>
-                    <span className="text-base font-medium text-emerald-600">
+                    <motion.span
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.28, type: "spring", stiffness: 240, damping: 14 }}
+                      className="text-base font-medium text-emerald-600"
+                    >
                       {isFreeDelivery ? "Free delivery" : formatPrice(discount)}
-                    </span>
+                    </motion.span>
                   </div>
                   <div className="h-px bg-border my-2" />
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground font-light">
                       New total
                     </span>
-                    <span className="text-lg font-semibold text-foreground tracking-tight">
+                    <motion.span
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.35, type: "spring", stiffness: 240, damping: 14 }}
+                      className="text-lg font-semibold text-foreground tracking-tight"
+                    >
                       {formatPrice(newTotal)}
-                    </span>
+                    </motion.span>
                   </div>
-                </div>
+                </motion.div>
 
                 <Button
                   onClick={onClose}

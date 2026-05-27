@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatPrice } from "@/lib/pricing-utils";
+import { formatPrice, getDeliveryCharge, type PricingSettings } from "@/lib/pricing-utils";
 import { formatFileSize } from "@/lib/file-utils";
 import { createOrder } from "@/lib/order-api";
 import { axiosInstance } from "@/lib/axios";
@@ -33,6 +33,7 @@ import {
   Truck,
   Calendar,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,8 @@ import {
 import { validateCoupon, getActiveCoupons, Coupon } from "@/lib/coupon-api";
 import { Ticket, Info as LucideInfo, ChevronRight, Gift } from "lucide-react";
 import { useEffect } from "react";
-import { CouponSuccessDialog } from "./coupon-success-dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { SparkleBurst } from "./sparkle-burst";
 
 // Component for printing (hidden from screen)
 interface PrintableOrderSummaryProps {
@@ -164,7 +166,7 @@ interface ReviewStepProps {
   packingCharge: number;
   total: number;
   onBack: () => void;
-  pricingSettings?: any;
+  pricingSettings?: PricingSettings;
 }
 
 export function ReviewStep({
@@ -189,10 +191,12 @@ export function ReviewStep({
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponSuccessOpen, setCouponSuccessOpen] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [activeCoupons, setActiveCoupons] = useState<Coupon[]>([]);
+  const [showFreeDeliveryCelebration, setShowFreeDeliveryCelebration] = useState(false);
+  const [showCouponAnimation, setShowCouponAnimation] = useState(false);
 
   // Pincode lookup state
   const [postOffices, setPostOffices] = useState<PostOffice[]>([]);
@@ -228,15 +232,21 @@ export function ReviewStep({
         return;
       }
       setPostOffices(result.postOffices);
-      const firstCity =
-        result.postOffices[0]?.name || result.district || "";
+
+      const newDeliveryCharge = getDeliveryCharge(subtotal, result.state, pricingSettings);
+      if (deliveryCharge > 0 && newDeliveryCharge === 0) {
+        setShowFreeDeliveryCelebration(true);
+        setTimeout(() => setShowFreeDeliveryCelebration(false), 5000);
+      }
+
       onDeliveryInfoChange({
         ...deliveryInfo,
         pincode,
         state: result.state,
-        city: deliveryInfo.city || firstCity,
+        city: "",
       });
       setErrors((prev) => ({ ...prev, state: "", city: "", pincode: "" }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (
         err?.name === "CanceledError" ||
@@ -410,10 +420,18 @@ export function ReviewStep({
       const response = await validateCoupon(couponCode, subtotal);
       if (response.success) {
         setAppliedCoupon(response.data);
-        setCouponSuccessOpen(true); // open success popup only on real success
+        // Trigger inline sparkle animation
+        setShowCouponAnimation(true);
+        setTimeout(() => setShowCouponAnimation(false), 2000);
+        
+        if (response.data.type === "free-delivery") {
+          setShowFreeDeliveryCelebration(true);
+          setTimeout(() => setShowFreeDeliveryCelebration(false), 5000);
+        }
       } else {
         setCouponError(response.message || "Invalid coupon code");
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       setCouponError(
         error.response?.data?.message || "Failed to validate coupon",
@@ -561,6 +579,7 @@ export function ReviewStep({
         theme: {
           color: "#7c3aed", // TODO: Use primary color from theme
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async function (response: any) {
           try {
             // 6. Verify Payment on Backend
@@ -604,6 +623,7 @@ export function ReviewStep({
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const paymentObject = new (window as any).Razorpay(options);
       paymentObject.open();
     } catch (error: unknown) {
@@ -1151,12 +1171,57 @@ export function ReviewStep({
                       </span>
                     </div>
 
-                    {/* Delivery Progress Bar */}
+                    {/* Delivery Progress Bar or Free Delivery Banner */}
                     {(() => {
                       const freeThreshold =
                         pricingSettings.deliveryThresholds?.find(
-                          (t: any) => t.charge === 0,
+                          (t) => t.charge === 0,
                         )?.minAmount;
+                      
+                      const isFree = deliveryCharge === 0 || isFreeDeliveryApplied;
+
+                      if (isFree) {
+                        return (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: "auto", scale: 1 }}
+                            transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                            className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg flex items-center gap-2 relative overflow-hidden"
+                          >
+                            {/* Ambient shimmer glow */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/10 to-transparent animate-pulse pointer-events-none" />
+                            
+                            <motion.div
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ repeat: Infinity, repeatDelay: 3, duration: 0.6 }}
+                              className="text-emerald-600 shrink-0"
+                            >
+                              <Truck className="h-5 w-5" />
+                            </motion.div>
+                            
+                            <div className="flex-1">
+                              <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                                Free Delivery Unlocked!
+                              </p>
+                              <p className="text-[9px] text-emerald-600/90 dark:text-emerald-400/90 font-light">
+                                Congratulations! Delivery charges removed.
+                              </p>
+                            </div>
+                            
+                            {/* Ambient rotating sparkle */}
+                            <div className="absolute right-2 top-2 pointer-events-none">
+                              <motion.div
+                                animate={{ rotate: 360, scale: [0.8, 1.2, 0.8] }}
+                                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                                className="text-emerald-400 dark:text-emerald-500"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                              </motion.div>
+                            </div>
+                          </motion.div>
+                        );
+                      }
+
                       if (freeThreshold && subtotal < freeThreshold) {
                         const progress = (subtotal / freeThreshold) * 100;
                         const remaining = freeThreshold - subtotal;
@@ -1289,31 +1354,62 @@ export function ReviewStep({
                       )}
                     </div>
                   ) : (
-                    <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-green-500/10 rounded-lg">
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 18 }}
+                      className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl flex items-center justify-between relative overflow-hidden"
+                    >
+                      {/* Sparkle burst animation on coupon apply */}
+                      <SparkleBurst active={showCouponAnimation} />
+                      
+                      {/* Subtle shimmer effect */}
+                      <motion.div
+                        initial={{ x: "-100%" }}
+                        animate={{ x: "200%" }}
+                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-green-200/20 to-transparent pointer-events-none"
+                      />
+                      
+                      <div className="flex items-center gap-2 relative z-10">
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.1 }}
+                          className="p-1.5 bg-green-500/10 rounded-lg"
+                        >
                           <Ticket className="h-4 w-4 text-green-600" />
-                        </div>
+                        </motion.div>
                         <div>
-                          <p className="text-xs font-bold text-green-700 uppercase">
+                          <motion.p
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.15 }}
+                            className="text-xs font-bold text-green-700 uppercase"
+                          >
                             {appliedCoupon.code}
-                          </p>
-                          <p className="text-[10px] text-green-600">
+                          </motion.p>
+                          <motion.p
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-[10px] text-green-600"
+                          >
                             {isFreeDeliveryApplied
                               ? "Delivery charge waived"
                               : `-${formatPrice(appliedCoupon.discount)} discount applied`}
-                          </p>
+                          </motion.p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={removeCoupon}
-                        className="h-8 w-8 text-green-700 hover:bg-green-500/10"
+                        className="h-8 w-8 text-green-700 hover:bg-green-500/10 relative z-10"
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
+                    </motion.div>
                   )}
                 </div>
 
@@ -1418,15 +1514,43 @@ export function ReviewStep({
         total={total}
       />
 
-      {/* Coupon success popup */}
-      <CouponSuccessDialog
-        open={couponSuccessOpen}
-        onClose={() => setCouponSuccessOpen(false)}
-        couponCode={appliedCoupon?.code || ""}
-        discount={appliedCoupon?.discount || 0}
-        isFreeDelivery={isFreeDeliveryApplied}
-        newTotal={finalTotal}
-      />
+      {/* Floating Free Delivery Celebration Alert */}
+      <AnimatePresence>
+        {showFreeDeliveryCelebration && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+            exit={{ opacity: 0, y: -20, scale: 0.9, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="fixed top-6 left-1/2 z-50 bg-[#ffffff] dark:bg-card border border-emerald-200 dark:border-emerald-500/20 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3.5 max-w-sm w-[calc(100%-2rem)]"
+            style={{
+              boxShadow: "rgba(16, 185, 129, 0.15) 0px 20px 40px, rgba(50, 50, 93, 0.2) 0px 10px 25px, rgba(0, 0, 0, 0.1) 0px 5px 10px",
+            }}
+          >
+            {/* Sparkle burst triggered around the alert */}
+            <SparkleBurst active={showFreeDeliveryCelebration} />
+            
+            <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 10, 0] }}
+                transition={{ repeat: Infinity, repeatDelay: 2, duration: 0.5 }}
+                className="text-emerald-600"
+              >
+                <Truck className="h-5 w-5" />
+              </motion.div>
+            </div>
+            
+            <div>
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                Free Delivery Unlocked!
+              </p>
+              <p className="text-xs text-muted-foreground font-light">
+                Congratulations! Delivery charges have been removed.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Navigation */}
       <div className="mt-8">

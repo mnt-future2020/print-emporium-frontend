@@ -4,6 +4,7 @@ export interface CreateLeadData {
   name: string;
   email: string;
   phone?: string;
+  companyName?: string;
   subject: string;
   message: string;
   source?: string;
@@ -14,9 +15,10 @@ export interface Lead {
   name: string;
   email: string;
   phone: string;
+  companyName?: string;
   subject: string;
   message: string;
-  status: "new" | "contacted" | "qualified" | "lost" | "converted";
+  status: "new" | "read" | "replied" | "closed";
   source: string;
   notes: string;
   assignedTo: string | null;

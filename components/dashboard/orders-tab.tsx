@@ -1115,16 +1115,6 @@ export function OrdersTab({ user }: OrdersTabProps) {
                         >
                           Download A5
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDownloadInvoice(selectedOrder, "letter")}
-                        >
-                          Download Letter
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDownloadInvoice(selectedOrder, "legal")}
-                        >
-                          Download Legal
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
