@@ -104,7 +104,7 @@ export default async function ServiceDetailPage({
         <div className="mb-16">
           <Link
             href="/services"
-            className="group inline-flex items-center gap-3 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors duration-300"
+            className="group inline-flex items-center gap-2 h-10 pl-3 pr-4 rounded-full border border-border bg-card text-sm font-semibold text-foreground shadow-sm hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <ArrowLeft
               className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1"
@@ -115,10 +115,10 @@ export default async function ServiceDetailPage({
         </div>
 
         {/* Hero Section — Editorial Layout */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center mb-32">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-stretch mb-32">
 
           {/* Left / Top: Typography & CTA */}
-          <div className="order-2 lg:order-1 space-y-10">
+          <div className="order-2 lg:order-1 flex flex-col justify-center space-y-10">
             <div>
               {/* Status badge */}
               {isComingSoon ? (
@@ -246,9 +246,9 @@ export default async function ServiceDetailPage({
             )}
           </div>
 
-          {/* Right / Bottom: Portrait Image */}
+          {/* Right / Bottom: Image — matches the left content height on desktop */}
           <div className="order-1 lg:order-2">
-            <div className="relative w-full aspect-[4/5] rounded-3xl overflow-hidden bg-muted shadow-2xl shadow-black/5 border border-border/50">
+            <div className="relative w-full aspect-4/3 lg:aspect-auto lg:h-full min-h-75 rounded-3xl overflow-hidden bg-muted shadow-2xl shadow-black/5 border border-border/50">
               {service.image ? (
                 <Image
                   src={typeof service.image === "string" ? service.image : ""}
@@ -461,12 +461,12 @@ export default async function ServiceDetailPage({
                 <Link
                   key={rel._id}
                   href={`/services/${rel._id}`}
-                  className="group"
+                  className="group block h-full"
                   style={{ animationDelay: `${idx * 0.1}s`, animationFillMode: "both" }}
                 >
-                  <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-card border border-border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+                  <div className="group relative flex flex-col h-full overflow-hidden rounded-2xl bg-card border border-border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
                     {/* Image */}
-                    <div className="relative w-full aspect-[4/5] overflow-hidden bg-muted">
+                    <div className="relative w-full aspect-4/3 overflow-hidden bg-muted">
                       {rel.image ? (
                         <Image
                           src={typeof rel.image === "string" ? rel.image : ""}
