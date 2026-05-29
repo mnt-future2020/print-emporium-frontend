@@ -34,7 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data?.user) {
         setUser(response.data.user);
       } else {
-        console.log("❌ No valid session found");
         setUser(null);
       }
     } catch (error) {

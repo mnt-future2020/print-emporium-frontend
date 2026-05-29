@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -534,6 +535,30 @@ export function ServiceFormModal({
             {errors.name && (
               <p className="text-xs text-red-500">{errors.name}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium">
+              Description{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </label>
+            <Textarea
+              id="description"
+              placeholder="Brief description shown on the service detail page…"
+              value={formData.description || ""}
+              maxLength={1000}
+              rows={3}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="rounded-lg resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground font-light">
+              {(formData.description || "").length}/1000 — appears on the
+              customer-facing service detail page.
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -1189,7 +1189,7 @@ export function ReviewStep({
                             className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg flex items-center gap-2 relative overflow-hidden"
                           >
                             {/* Ambient shimmer glow */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-100/10 to-transparent animate-pulse pointer-events-none" />
+                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-emerald-100/10 to-transparent animate-pulse pointer-events-none" />
                             
                             <motion.div
                               animate={{ scale: [1, 1.2, 1] }}
@@ -1368,7 +1368,7 @@ export function ReviewStep({
                         initial={{ x: "-100%" }}
                         animate={{ x: "200%" }}
                         transition={{ duration: 1.5, ease: "easeInOut" }}
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-green-200/20 to-transparent pointer-events-none"
+                        className="absolute inset-0 bg-linear-to-r from-transparent via-green-200/20 to-transparent pointer-events-none"
                       />
                       
                       <div className="flex items-center gap-2 relative z-10">

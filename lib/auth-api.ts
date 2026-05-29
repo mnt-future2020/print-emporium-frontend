@@ -31,18 +31,13 @@ export interface AuthResponse {
 // Email/Password Authentication
 export const login = async (
   email: string,
-  password: string
+  password: string,
 ): Promise<AuthResponse> => {
   try {
-    console.log("🔄 Attempting login with:", {
-      email,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL,
-    });
     const response = await axiosInstance.post("/api/auth/sign-in/email", {
       email,
       password,
     });
-    console.log("✅ Login successful:", response.data);
     return {
       success: true,
       data: response.data,
@@ -56,20 +51,14 @@ export const login = async (
 export const signup = async (
   email: string,
   password: string,
-  name: string
+  name: string,
 ): Promise<AuthResponse> => {
   try {
-    console.log("🔄 Attempting signup with:", {
-      email,
-      name,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL,
-    });
     const response = await axiosInstance.post("/api/auth/sign-up/email", {
       email,
       password,
       name,
     });
-    console.log("✅ Signup successful:", response.data);
     return {
       success: true,
       data: response.data,
@@ -82,9 +71,7 @@ export const signup = async (
 
 export const logout = async (): Promise<AuthResponse> => {
   try {
-    console.log("🔄 Attempting logout");
     const response = await axiosInstance.post("/api/auth/sign-out");
-    console.log("✅ Logout successful");
     return {
       success: true,
       data: response.data,
@@ -103,7 +90,6 @@ export const getSession = async (): Promise<AuthResponse> => {
       data: response.data,
     };
   } catch (error: any) {
-    console.log("ℹ️ No active session found");
     // Session not found is not an error, just return empty
     return {
       success: false,
@@ -114,18 +100,17 @@ export const getSession = async (): Promise<AuthResponse> => {
 
 export const requestPasswordReset = async (
   email: string,
-  redirectTo?: string
+  redirectTo?: string,
 ) => {
   try {
-    console.log("🔄 Requesting password reset for:", email);
     const response = await axiosInstance.post(
       "/api/auth/request-password-reset",
       {
         email,
         redirectTo: redirectTo || "/reset-password",
-      }
+      },
     );
-    console.log("✅ Password reset request successful");
+
     return {
       success: true,
       data: response.data,
@@ -133,10 +118,10 @@ export const requestPasswordReset = async (
   } catch (error: any) {
     console.error(
       "❌ Password reset request failed:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
     );
     throw new Error(
-      error.response?.data?.message || "Failed to send reset email"
+      error.response?.data?.message || "Failed to send reset email",
     );
   }
 };
@@ -153,7 +138,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
     };
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || "Failed to reset password"
+      error.response?.data?.message || "Failed to reset password",
     );
   }
 };
@@ -169,13 +154,6 @@ export const signInWithGoogle = async (callbackURL?: string): Promise<void> => {
       : `${frontendUrl}/dashboard`;
     const errorURL = `${frontendUrl}/login?error=oauth`;
 
-    console.log("🔄 Starting Google OAuth flow...", {
-      frontendUrl,
-      fullCallbackURL,
-      errorURL,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL,
-    });
-
     // Use axios to make the request with proper JSON content type
     const response = await axiosInstance.post("/api/auth/sign-in/social", {
       provider: "google",
@@ -183,11 +161,8 @@ export const signInWithGoogle = async (callbackURL?: string): Promise<void> => {
       errorURL: errorURL, // Where to redirect on OAuth error
     });
 
-    console.log("✅ Google OAuth initiated:", response.data);
-
     // If the response contains a URL, redirect to it (this is the Google consent page)
     if (response.data && response.data.url) {
-      console.log("🔀 Redirecting to Google consent:", response.data.url);
       window.location.href = response.data.url;
     } else {
       console.error("❌ No redirect URL in response:", response.data);
@@ -195,7 +170,7 @@ export const signInWithGoogle = async (callbackURL?: string): Promise<void> => {
   } catch (error: any) {
     console.error(
       "❌ Google OAuth error:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
     );
     throw error;
   }

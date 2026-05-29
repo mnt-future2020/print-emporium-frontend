@@ -30,92 +30,86 @@ const ServiceCard = ({
     service.printTypes?.some((pt) => (pt.pricePerCopy || 0) > 0) ||
     service.paperSizes?.some((ps) => (ps.pricePerCopy || 0) > 0);
 
-  return (
-    <div
-      className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl bg-card backdrop-blur-sm transition-all duration-500 hover:shadow-2xl hover:-translate-y-2",
-        "border border-border/50 hover:border-primary/50",
-        "animate-fade-in-up",
-      )}
-      style={{
-        animationDelay: `${index * 0.1}s`,
-        animationFillMode: "both",
-      }}
-    >
+  const isComingSoon = service.status === "coming-soon";
+
+  const CardBody = () => (
+    <>
       {/* Gradient Overlay Background */}
-      <div className="absolute inset-0 bg-linear-to-br from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-muted opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       {/* Image Container */}
-      <div className="relative h-56 w-full overflow-hidden">
+      <div className="relative h-56 w-full overflow-hidden bg-muted">
         {service.image ? (
-          <Image
-            src={typeof service.image === "string" ? service.image : ""}
-            alt={service.name}
-            fill
-            className="object-cover transition-all duration-700 group-hover:scale-125 group-hover:rotate-2"
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
+          <>
+            <Image
+              src={typeof service.image === "string" ? service.image : ""}
+              alt={service.name}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+          </>
         ) : (
-          <div className="h-full w-full bg-linear-to-br from-primary/5 to-primary/10 flex items-center justify-center">
-            <Layers className="h-20 w-20 text-primary/20" />
+          <div className="h-full w-full bg-muted flex items-center justify-center">
+            <Layers className="h-16 w-16 text-muted-foreground/30" />
           </div>
         )}
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-linear-to-t from-background via-background/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
-
         {/* Price Badge */}
-        <div className="absolute top-4 right-4 px-3 py-2 rounded-xl bg-background/95 backdrop-blur-md shadow-lg border border-primary/10">
-          <div className="flex items-center gap-1">
-            {(() => {
-              const ranges = service.basePriceRanges || [];
-              const displayPrice =
-                ranges.length > 0
-                  ? Math.min(...ranges.map((r) => r.price))
-                  : service.basePricePerPage;
-              if (
-                service.customQuotation &&
-                !displayPrice &&
-                ranges.length === 0
-              ) {
-                return (
-                  <span className="font-bold text-sm text-primary uppercase tracking-wider px-1">
-                    Quote
-                  </span>
-                );
-              }
-              return (
-                <>
-                  {ranges.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground mr-0.5">
-                      From
+        {!isComingSoon && (
+          <div className="absolute top-4 right-4 px-3 py-2 rounded-xl bg-background/95 backdrop-blur-md shadow-md border border-border">
+            <div className="flex items-center gap-1">
+              {(() => {
+                const ranges = service.basePriceRanges || [];
+                const displayPrice =
+                  ranges.length > 0
+                    ? Math.min(...ranges.map((r) => r.price))
+                    : service.basePricePerPage;
+                if (
+                  service.customQuotation &&
+                  !displayPrice &&
+                  ranges.length === 0
+                ) {
+                  return (
+                    <span className="font-bold text-sm text-primary uppercase tracking-wider px-1">
+                      Quote
                     </span>
-                  )}
-                  <IndianRupee className="h-4 w-4 text-primary" />
-                  <span className="font-bold text-lg text-foreground">
-                    {displayPrice}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    /{hasPerCopyPricing ? "copy" : "page"}
-                  </span>
-                </>
-              );
-            })()}
+                  );
+                }
+                return (
+                  <>
+                    {ranges.length > 0 && (
+                      <span className="text-[10px] text-muted-foreground mr-0.5">
+                        From
+                      </span>
+                    )}
+                    <IndianRupee className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-lg text-foreground">
+                      {displayPrice}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      /{hasPerCopyPricing ? "copy" : "page"}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Coming Soon Badge */}
-        {service.status === "coming-soon" && (
+        {isComingSoon && (
           <div className="absolute top-4 left-4 z-20">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg">
-              <Clock className="w-3 h-3" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase tracking-wider shadow-sm">
+              <Clock className="w-3.5 h-3.5" />
               Coming Soon
             </div>
           </div>
         )}
 
         {/* Star Effect */}
-        {service.status !== "coming-soon" && (
+        {!isComingSoon && (
           <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <Star className="w-6 h-6 text-primary animate-pulse fill-primary" />
           </div>
@@ -128,7 +122,7 @@ const ServiceCard = ({
           <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
             {service.name}
           </h3>
-          {service.customQuotation && (
+          {service.customQuotation && !isComingSoon && (
             <div className="px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
               <span className="text-[10px] font-black text-primary uppercase tracking-tighter">
                 Quote
@@ -139,7 +133,7 @@ const ServiceCard = ({
 
         {/* Service Details / Highlights */}
         <div className="space-y-3 mb-8 flex-1">
-          {service.customQuotation ? (
+          {service.customQuotation || isComingSoon ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
@@ -149,10 +143,10 @@ const ServiceCard = ({
               </div>
               <ul className="space-y-1.5">
                 {[
-                  "Custom Design Consultation",
-                  "Specialized Printing Solutions",
-                  "Bulk Order Discounts",
-                  "Priority Expert Support",
+                  "Premium Quality Guaranteed",
+                  "Fast Turnaround Options",
+                  "Quality Assurance Guarantee",
+                  "Priority Expert Consultation",
                 ].map((highlight, i) => (
                   <li
                     key={i}
@@ -199,24 +193,22 @@ const ServiceCard = ({
         </div>
 
         {/* CTA Button */}
-        {service.status === "coming-soon" ? (
-          <Button
-            disabled
-            aria-disabled
-            className="w-full rounded-xl font-semibold bg-muted text-muted-foreground cursor-not-allowed border border-border"
-          >
-            <span className="flex items-center justify-center gap-2">
+        {isComingSoon ? (
+          <div className="w-full mt-auto pt-4">
+            <div
+              className="w-full rounded-xl font-bold bg-muted text-muted-foreground hover:bg-primary/90 hover:text-primary-foreground h-11 flex items-center justify-center gap-2 transition-colors duration-200 cursor-pointer"
+            >
               <Clock className="w-4 h-4" />
-              Available Soon
-            </span>
-          </Button>
+              View Details
+            </div>
+          </div>
         ) : service.customQuotation ? (
           <Link
             href={`/contact?subject=Inquiry for ${encodeURIComponent(service.name)}`}
             className="w-full"
           >
             <Button
-              className="w-full group/btn relative overflow-hidden rounded-xl font-bold bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
+              className="w-full group/btn relative overflow-hidden rounded-xl font-bold bg-background border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
               variant="outline"
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
@@ -246,6 +238,41 @@ const ServiceCard = ({
 
       {/* Corner Accent */}
       <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full transform scale-0 group-hover:scale-100 transition-transform duration-500" />
+    </>
+  );
+
+  if (isComingSoon) {
+    return (
+      <Link
+        href={`/services/${service._id}`}
+        className={cn(
+          "group relative flex flex-col overflow-hidden rounded-2xl bg-background transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          "border border-border",
+          "animate-fade-in-up",
+        )}
+        style={{
+          animationDelay: `${index * 0.1}s`,
+          animationFillMode: "both",
+        }}
+      >
+        <CardBody />
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-2xl bg-background transition-all duration-300 hover:shadow-xl hover:-translate-y-1",
+        "border border-border",
+        "animate-fade-in-up",
+      )}
+      style={{
+        animationDelay: `${index * 0.1}s`,
+        animationFillMode: "both",
+      }}
+    >
+      <CardBody />
     </div>
   );
 };
