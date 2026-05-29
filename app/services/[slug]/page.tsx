@@ -122,7 +122,7 @@ export default async function ServiceDetailPage({
             <div>
               {/* Status badge */}
               {isComingSoon ? (
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-widest mb-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-bold uppercase tracking-widest mb-8">
                   <Clock className="w-3.5 h-3.5" aria-hidden="true" />
                   Coming Soon
                 </div>
@@ -237,8 +237,8 @@ export default async function ServiceDetailPage({
 
             {/* Coming-soon notice */}
             {isComingSoon && (
-              <div className="flex items-center gap-3 text-muted-foreground border-l-2 border-amber-500/40 pl-4 py-1">
-                <Shield className="w-5 h-5 text-amber-500/60" aria-hidden="true" />
+              <div className="flex items-center gap-3 text-muted-foreground border-l-2 border-primary/40 pl-4 py-1">
+                <Shield className="w-5 h-5 text-primary/60" aria-hidden="true" />
                 <span className="text-sm font-medium">
                   This service is currently under preparation.
                 </span>
