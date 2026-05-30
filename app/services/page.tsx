@@ -405,7 +405,7 @@ export default async function ServicesPage() {
                 return (
                   <Link
                     key={service._id}
-                    href={`/services/${service._id}`}
+                    href={`/services/${service.slug || service._id}`}
                     className="group relative bg-background rounded-2xl border border-border overflow-hidden transition-all duration-300 flex flex-col h-full cursor-pointer hover:shadow-xl hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <CardContent />

@@ -58,6 +58,7 @@ export const deleteServiceOption = async (id: string) => {
 export interface Service {
   _id?: string;
   name: string;
+  slug?: string;
   description?: string;
   image?: string | { data: string; name: string } | null;
   basePrice?: number; // Alias for basePricePerPage for display purposes

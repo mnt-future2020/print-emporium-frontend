@@ -244,7 +244,7 @@ const ServiceCard = ({
   if (isComingSoon) {
     return (
       <Link
-        href={`/services/${service._id}`}
+        href={`/services/${service.slug || service._id}`}
         className={cn(
           "group relative flex flex-col overflow-hidden rounded-2xl bg-background transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
           "border border-border",

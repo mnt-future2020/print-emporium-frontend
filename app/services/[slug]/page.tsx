@@ -36,9 +36,10 @@ export async function generateMetadata({ params }: ServiceDetailPageProps) {
   try {
     const res = await getAllServices("active,coming-soon");
     if (res.success && res.data) {
-      const service = res.data.find(
-        (s: Service) => s._id === resolvedParams.slug,
-      );
+      // Try slug first, fall back to _id for backward compatibility
+      const service =
+        res.data.find((s: Service) => s.slug === resolvedParams.slug) ||
+        res.data.find((s: Service) => s._id === resolvedParams.slug);
       if (service) {
         const isComingSoon = service.status === "coming-soon";
         return {
@@ -75,8 +76,11 @@ export default async function ServiceDetailPage({
     const res = await getAllServices("active,coming-soon");
     if (res.success && res.data) {
       allServices = res.data;
+      // Try slug first, fall back to _id for backward compatibility
       service =
-        res.data.find((s: Service) => s._id === resolvedParams.slug) || null;
+        res.data.find((s: Service) => s.slug === resolvedParams.slug) ||
+        res.data.find((s: Service) => s._id === resolvedParams.slug) ||
+        null;
     }
   } catch (error) {
     console.error("[ServiceDetail] Failed to fetch service:", error);
@@ -460,7 +464,7 @@ export default async function ServiceDetailPage({
               .map((rel: Service, idx: number) => (
                 <Link
                   key={rel._id}
-                  href={`/services/${rel._id}`}
+                  href={`/services/${rel.slug || rel._id}`}
                   className="group block h-full"
                   style={{ animationDelay: `${idx * 0.1}s`, animationFillMode: "both" }}
                 >
