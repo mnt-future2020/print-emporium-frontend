@@ -1,0 +1,108 @@
+import { axiosInstance } from "./axios";
+
+export interface ShiprocketCourier {
+  courier_company_id: number;
+  courier_name: string;
+  rate: number;
+  etd?: string;
+  estimated_delivery_days?: string;
+  freight_charge?: number;
+  cod_charges?: number;
+}
+
+export interface ServiceabilityResult {
+  success: boolean;
+  serviceable: boolean;
+  cheapestRate: number | null;
+  cheapestCourier: string | null;
+  etd: string | null;
+  couriers: ShiprocketCourier[];
+}
+
+export interface ShiprocketMeta {
+  orderId?: string | null;
+  shipmentId?: string | null;
+  awbCode?: string | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  labelUrl?: string | null;
+  manifestUrl?: string | null;
+  lastStatus?: string | null;
+  lastStatusAt?: string | null;
+  lastSyncedAt?: string | null;
+}
+
+export interface TrackingActivity {
+  date?: string;
+  activity?: string;
+  location?: string;
+  status?: string;
+  sr_status_label?: string;
+}
+
+export interface TrackingResponse {
+  success: boolean;
+  tracking: {
+    track_status?: number | string;
+    shipment_status?: number | string;
+    shipment_track?: Array<{
+      awb_code?: string;
+      courier_name?: string;
+      current_status?: string;
+      origin?: string;
+      destination?: string;
+      pickup_date?: string;
+      delivered_date?: string;
+    }>;
+    shipment_track_activities?: TrackingActivity[];
+    etd?: string;
+    track_url?: string;
+  };
+}
+
+export const checkServiceability = async (params: {
+  pickup: string;
+  delivery: string;
+  weight?: number;
+  cod?: number;
+}): Promise<ServiceabilityResult> => {
+  const res = await axiosInstance.get("/api/shiprocket/serviceability", {
+    params: {
+      pickup: params.pickup,
+      delivery: params.delivery,
+      weight: params.weight ?? 0.5,
+      cod: params.cod ?? 0,
+    },
+  });
+  return res.data;
+};
+
+export const pushOrderToShiprocket = async (orderId: string) => {
+  const res = await axiosInstance.post(`/api/shiprocket/orders/${orderId}/push`);
+  return res.data as { success: boolean; shiprocket: ShiprocketMeta; raw?: unknown };
+};
+
+export const assignOrderAwb = async (orderId: string, courierId?: number) => {
+  const res = await axiosInstance.post(
+    `/api/shiprocket/orders/${orderId}/awb`,
+    courierId ? { courierId } : {},
+  );
+  return res.data as { success: boolean; shiprocket: ShiprocketMeta; raw?: unknown };
+};
+
+export const schedulePickup = async (orderId: string) => {
+  const res = await axiosInstance.post(
+    `/api/shiprocket/orders/${orderId}/pickup`,
+  );
+  return res.data as { success: boolean; raw?: unknown };
+};
+
+export const trackOrder = async (orderId: string): Promise<TrackingResponse> => {
+  const res = await axiosInstance.get(`/api/shiprocket/orders/${orderId}/track`);
+  return res.data;
+};
+
+export const fetchLabel = async (orderId: string) => {
+  const res = await axiosInstance.get(`/api/shiprocket/orders/${orderId}/label`);
+  return res.data as { success: boolean; labelUrl?: string | null; raw?: unknown };
+};

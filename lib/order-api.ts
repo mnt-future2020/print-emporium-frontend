@@ -136,6 +136,18 @@ export interface Order {
   paymentId: string | null;
   trackingNumber: string | null;
   estimatedDelivery: string | null;
+  shiprocket?: {
+    orderId?: string | null;
+    shipmentId?: string | null;
+    awbCode?: string | null;
+    courierId?: number | null;
+    courierName?: string | null;
+    labelUrl?: string | null;
+    manifestUrl?: string | null;
+    lastStatus?: string | null;
+    lastStatusAt?: string | null;
+    lastSyncedAt?: string | null;
+  };
   notes: string;
   createdAt: string;
   updatedAt: string;

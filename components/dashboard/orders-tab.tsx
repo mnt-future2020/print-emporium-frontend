@@ -38,6 +38,8 @@ import { toast } from "sonner";
 import { TrackingModal } from "./tracking-modal";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { MarkAsShippedDialog } from "@/components/admin/mark-as-shipped-dialog";
+import { ShiprocketPanel } from "@/components/admin/shiprocket-panel";
+import { CustomerTracking } from "@/components/customer/customer-tracking";
 import { downloadOrderSlip, downloadShippingLabel, downloadOrderFilesMerged } from "@/lib/pdf-service";
 import {
   DropdownMenu,
@@ -91,6 +93,18 @@ interface Order {
   paymentMethod?: string;
   paymentId?: string;
   trackingNumber?: string;
+  shiprocket?: {
+    orderId?: string | null;
+    shipmentId?: string | null;
+    awbCode?: string | null;
+    courierId?: number | null;
+    courierName?: string | null;
+    labelUrl?: string | null;
+    manifestUrl?: string | null;
+    lastStatus?: string | null;
+    lastStatusAt?: string | null;
+    lastSyncedAt?: string | null;
+  };
   items: OrderItem[];
   deliveryInfo: {
     fullName: string;
@@ -1295,6 +1309,32 @@ export function OrdersTab({ user }: OrdersTabProps) {
                       )}
                     </div>
                   </div>
+
+                  {/* Shiprocket — admin & employee only */}
+                  {isAdminOrEmployee && (
+                    <ShiprocketPanel
+                      order={selectedOrder}
+                      onUpdated={() => {
+                        fetchOrders();
+                      }}
+                    />
+                  )}
+
+                  {/* Customer-facing tracking */}
+                  {!isAdminOrEmployee &&
+                    (selectedOrder.status === "shipped" ||
+                      selectedOrder.status === "delivered" ||
+                      selectedOrder.shiprocket?.awbCode) && (
+                      <CustomerTracking
+                        orderId={selectedOrder._id}
+                        awb={
+                          selectedOrder.shiprocket?.awbCode ||
+                          selectedOrder.trackingNumber
+                        }
+                        courierName={selectedOrder.shiprocket?.courierName}
+                        lastStatus={selectedOrder.shiprocket?.lastStatus}
+                      />
+                    )}
                 </div>
 
                 {/* Right Column */}

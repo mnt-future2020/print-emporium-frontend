@@ -11,9 +11,10 @@ import { EmailSettingsTab } from "@/components/settings/email-settings-tab";
 import { SEOSettingsTab } from "@/components/settings/seo-settings-tab";
 import { HeroCarouselTab } from "@/components/settings/hero-carousel-tab";
 import { PaymentGatewayTab } from "@/components/settings/payment-gateway-tab";
+import { ShiprocketTab } from "@/components/settings/shiprocket-tab";
 import { PricingSettingsTab } from "@/components/settings/pricing-settings-tab";
 import { CouponSettingsTab } from "@/components/settings/coupon-settings-tab";
-import { Layout, CreditCard, ReceiptIndianRupee, Ticket } from "lucide-react";
+import { Layout, CreditCard, ReceiptIndianRupee, Ticket, Truck } from "lucide-react";
 
 export default function DashboardSettings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -45,7 +46,7 @@ export default function DashboardSettings() {
           transition={{ delay: 0.1 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 lg:w-fit">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 lg:w-fit">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
                 General Settings
@@ -65,6 +66,10 @@ export default function DashboardSettings() {
               <TabsTrigger value="payment" className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Payment Gateway
+              </TabsTrigger>
+              <TabsTrigger value="shiprocket" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Shiprocket
               </TabsTrigger>
               <TabsTrigger value="pricing" className="flex items-center gap-2">
                 <ReceiptIndianRupee className="h-4 w-4" />
@@ -99,6 +104,11 @@ export default function DashboardSettings() {
             {/* Payment Gateway Tab */}
             <TabsContent value="payment" className="space-y-6">
               <PaymentGatewayTab onMessage={handleMessage} />
+            </TabsContent>
+
+            {/* Shiprocket Tab */}
+            <TabsContent value="shiprocket" className="space-y-6">
+              <ShiprocketTab onMessage={handleMessage} />
             </TabsContent>
 
             {/* Pricing Settings Tab */}
