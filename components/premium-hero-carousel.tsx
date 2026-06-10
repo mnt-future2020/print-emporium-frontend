@@ -80,15 +80,38 @@ export default function PremiumHeroCarousel() {
           setSlides([
             {
               _id: "1",
-              title: "Professional Printing Services",
+              title: "Premium Business Cards That Make an Impression",
               subtitle:
-                "Quality printing solutions for all your business and personal needs in Chennai.",
-              image:
-                "/assets/images/hero-carousel.jpg", // Local fallback
-              ctaText: "Explore Services",
+                "From matte lamination to gold foil finishes — we craft business cards that speak before you do.",
+              image: "/assets/images/banner-1.jpg",
+              ctaText: "Order Now",
               ctaLink: "/services",
-              features: ["High Quality", "Fast Delivery", "Custom Designs"],
+              features: ["Spot UV Coating", "Gold Foil Edges", "Same-Day Dispatch"],
               order: 1,
+              isActive: true,
+            },
+            {
+              _id: "2",
+              title: "Brochures & Catalogs That Sell for You",
+              subtitle:
+                "Vibrant, high-fidelity brochure printing with premium paper stocks and stunning finishes for every industry.",
+              image: "/assets/images/banner-2.jpg",
+              ctaText: "Explore Brochures",
+              ctaLink: "/services",
+              features: ["Full-Color Printing", "Multiple Fold Options", "Bulk Discounts"],
+              order: 2,
+              isActive: true,
+            },
+            {
+              _id: "3",
+              title: "Large Format Printing for Maximum Impact",
+              subtitle:
+                "Banners, standees, and vinyl prints that command attention — printed large, delivered fast across Chennai.",
+              image: "/assets/images/banner-3.jpg",
+              ctaText: "Get a Quote",
+              ctaLink: "/services",
+              features: ["Roll-Up Banners", "Vinyl & Flex Prints", "Event-Ready"],
+              order: 3,
               isActive: true,
             },
           ]);
