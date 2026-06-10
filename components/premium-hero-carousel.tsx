@@ -84,7 +84,7 @@ export default function PremiumHeroCarousel() {
               subtitle:
                 "Quality printing solutions for all your business and personal needs in Chennai.",
               image:
-                "https://images.unsplash.com/photo-1562654501-a0ccc0fc3fb1?q=80&w=2000&auto=format&fit=crop", // Placeholder
+                "/assets/images/hero-carousel.jpg", // Local fallback
               ctaText: "Explore Services",
               ctaLink: "/services",
               features: ["High Quality", "Fast Delivery", "Custom Designs"],

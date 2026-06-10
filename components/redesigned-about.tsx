@@ -105,7 +105,7 @@ export default function AboutPage({
             >
               <div className="relative aspect-4/3 rounded-[2rem] overflow-hidden shadow-2xl shadow-primary-900/10">
                 <Image
-                  src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200&q=80"
+                  src="/assets/images/about-feature.jpg"
                   alt="Premium Printing Process"
                   fill
                   className="object-cover"

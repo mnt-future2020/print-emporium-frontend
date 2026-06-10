@@ -22,7 +22,7 @@ const testimonials: TestimonialData[] = [
     name: "Sarah Mitchell",
     role: "Marketing Director",
     company: "Creative Studios Inc",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
+    image: "/assets/images/avatars/sarah.jpg",
     rating: 5,
     testimonial: "Outstanding print quality! Our business cards and brochures exceeded expectations. The attention to detail and vibrant colors made our marketing materials stand out. Highly recommend their services!"
   },
@@ -31,7 +31,7 @@ const testimonials: TestimonialData[] = [
     name: "Rajesh Kumar",
     role: "Owner",
     company: "Kumar Enterprises",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    image: "/assets/images/avatars/rajesh.jpg",
     rating: 5,
     testimonial: "Fast turnaround and excellent customer service. They printed our new catalogs in just 2 days with perfect color matching. The quality is professional-grade and our clients love the new design!"
   },
@@ -40,7 +40,7 @@ const testimonials: TestimonialData[] = [
     name: "Priya Sharma",
     role: "Event Coordinator",
     company: "Elegant Events Chennai",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+    image: "/assets/images/avatars/priya.jpg",
     rating: 5,
     testimonial: "They handled our wedding invitation printing beautifully. The paper quality was luxurious and the printing was flawless. Every detail was perfect and delivered on time!"
   },
@@ -49,7 +49,7 @@ const testimonials: TestimonialData[] = [
     name: "David Thompson",
     role: "CEO",
     company: "Tech Solutions Chennai",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    image: "/assets/images/avatars/david.jpg",
     rating: 5,
     testimonial: "Professional service from start to finish. Our corporate materials including letterheads, envelopes, and presentation folders look amazing. They truly understand business printing needs."
   },

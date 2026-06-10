@@ -44,7 +44,7 @@ export function AboutHero() {
         <motion.div
           className="absolute inset-0 -z-20 w-full h-full opacity-20"
           style={{
-            backgroundImage: `url(https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop&crop=entropy&auto=format&q=80)`,
+            backgroundImage: `url(/assets/images/about-hero-bg.jpg)`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             y,
@@ -136,7 +136,7 @@ export function AboutHero() {
             <div className="inset-shadow-2xs ring-background dark:inset-shadow-white/20 bg-background relative mx-auto max-w-6xl overflow-hidden rounded-2xl border p-4 shadow-lg shadow-zinc-950/15 ring-1">
               <Image
                 className="bg-background aspect-video relative rounded-2xl object-cover"
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=2700&h=1440&fit=crop&crop=entropy&auto=format&q=80"
+                src="/assets/images/about-team.jpg"
                 alt="printing team collaboration"
                 width="2700"
                 height="1440"

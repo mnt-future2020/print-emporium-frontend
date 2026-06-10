@@ -274,8 +274,7 @@ export default function AuthPage({ initialMode = "login" }: AuthPageProps) {
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] hover:scale-105"
           style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?q=80&w=2574&auto=format&fit=crop')",
+            backgroundImage: "url('/assets/images/auth-bg.jpg')",
             animation: "kenburns 30s ease-out infinite alternate",
           }}
         />
@@ -329,7 +328,7 @@ export default function AuthPage({ initialMode = "login" }: AuthPageProps) {
                   className={`w-10 h-10 rounded-full border-2 border-primary bg-secondary flex items-center justify-center text-xs font-bold text-secondary-foreground overflow-hidden`}
                 >
                   <Image
-                    src={`https://i.pravatar.cc/100?img=${i + 15}`}
+                    src={`/assets/images/avatars/login-${i + 1}.jpg`}
                     alt="User"
                     width={40}
                     height={40}
