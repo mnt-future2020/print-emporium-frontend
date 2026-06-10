@@ -28,6 +28,7 @@ interface ShiprocketSettings {
   email: string;
   password: string;
   pickupLocation: string;
+  pickupPincode: string;
   webhookToken: string;
 }
 
@@ -41,6 +42,7 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
     email: "",
     password: "",
     pickupLocation: "Primary",
+    pickupPincode: "",
     webhookToken: "",
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -58,6 +60,7 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
           email: cfg.email || "",
           password: cfg.password || "",
           pickupLocation: cfg.pickupLocation || "Primary",
+          pickupPincode: cfg.pickupPincode || "",
           webhookToken: cfg.webhookToken || "",
         });
       }
@@ -202,6 +205,21 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
             <p className="text-xs text-muted-foreground">
               The nickname of the pickup address configured in Shiprocket
               (Settings → Pickup Addresses). Typically &quot;Primary&quot;.
+            </p>
+          </div>
+
+          {/* Pickup Pincode */}
+          <div className="space-y-2">
+            <Label htmlFor="pickupPincode">Pickup Pincode</Label>
+            <Input
+              id="pickupPincode"
+              value={settings.pickupPincode}
+              onChange={(e) => handleChange("pickupPincode", e.target.value)}
+              placeholder="600001"
+            />
+            <p className="text-xs text-muted-foreground">
+              The 6-digit pincode of your pickup address. Required to look up
+              couriers and rates for an order.
             </p>
           </div>
 

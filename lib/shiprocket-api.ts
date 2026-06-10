@@ -60,6 +60,25 @@ export interface TrackingResponse {
   };
 }
 
+export interface OrderCouriersResult {
+  success: boolean;
+  context: {
+    deliveryPincode: string;
+    weightKg: number;
+    orderValue: number;
+  };
+  couriers: ShiprocketCourier[];
+}
+
+export const getOrderCouriers = async (
+  orderId: string,
+): Promise<OrderCouriersResult> => {
+  const res = await axiosInstance.get(
+    `/api/shiprocket/orders/${orderId}/couriers`,
+  );
+  return res.data;
+};
+
 export const checkServiceability = async (params: {
   pickup: string;
   delivery: string;

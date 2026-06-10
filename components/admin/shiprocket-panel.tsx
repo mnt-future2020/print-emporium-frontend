@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   Truck,
   Send,
@@ -16,11 +23,14 @@ import { toast } from "sonner";
 import {
   pushOrderToShiprocket,
   assignOrderAwb,
+  getOrderCouriers,
   schedulePickup,
   trackOrder,
   fetchLabel,
   type TrackingResponse,
   type TrackingActivity,
+  type ShiprocketCourier,
+  type OrderCouriersResult,
 } from "@/lib/shiprocket-api";
 
 interface ShiprocketMetaShape {
@@ -69,6 +79,11 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
   const sr = order.shiprocket || {};
   const [busy, setBusy] = useState<ActionKey>(null);
   const [tracking, setTracking] = useState<TrackingResponse["tracking"] | null>(null);
+  const [courierModalOpen, setCourierModalOpen] = useState(false);
+  const [couriersLoading, setCouriersLoading] = useState(false);
+  const [couriers, setCouriers] = useState<ShiprocketCourier[]>([]);
+  const [courierContext, setCourierContext] = useState<OrderCouriersResult["context"] | null>(null);
+  const [assigningCourierId, setAssigningCourierId] = useState<number | null>(null);
 
   const run = async <T,>(key: ActionKey, fn: () => Promise<T>, successMsg: string) => {
     if (busy) return;
@@ -88,6 +103,42 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
   const handlePush = () => run("push", () => pushOrderToShiprocket(order._id), "Order pushed to Shiprocket");
   const handleAwb = () => run("awb", () => assignOrderAwb(order._id), "AWB assigned");
   const handlePickup = () => run("pickup", () => schedulePickup(order._id), "Pickup scheduled");
+
+  const openCourierModal = async () => {
+    setCourierModalOpen(true);
+    setCouriersLoading(true);
+    setCouriers([]);
+    setCourierContext(null);
+    try {
+      const result = await getOrderCouriers(order._id);
+      setCouriers(result.couriers || []);
+      setCourierContext(result.context || null);
+      if (!result.couriers?.length) {
+        toast.error("No serviceable couriers for this pincode");
+      }
+    } catch (err) {
+      toast.error(errMsg(err, "Failed to load couriers"));
+      setCourierModalOpen(false);
+    } finally {
+      setCouriersLoading(false);
+    }
+  };
+
+  const handleSelectCourier = async (courier: ShiprocketCourier) => {
+    if (assigningCourierId) return;
+    setAssigningCourierId(courier.courier_company_id);
+    const toastId = toast.loading(`Assigning ${courier.courier_name}...`);
+    try {
+      await assignOrderAwb(order._id, courier.courier_company_id);
+      toast.success(`AWB assigned via ${courier.courier_name}`, { id: toastId });
+      setCourierModalOpen(false);
+      onUpdated();
+    } catch (err) {
+      toast.error(errMsg(err, "Failed to assign AWB"), { id: toastId });
+    } finally {
+      setAssigningCourierId(null);
+    }
+  };
 
   const handleLabel = async () => {
     if (busy) return;
@@ -184,10 +235,25 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
         )}
 
         {hasShipment && !hasAwb && (
-          <Button size="sm" variant="default" onClick={handleAwb} disabled={busy === "awb"}>
-            {busy === "awb" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
-            Assign AWB (cheapest)
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={openCourierModal}
+              disabled={!!busy || couriersLoading}
+            >
+              {couriersLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <PackageCheck className="h-4 w-4 mr-2" />
+              )}
+              Select Courier
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleAwb} disabled={busy === "awb"}>
+              {busy === "awb" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
+              Auto (cheapest)
+            </Button>
+          </>
         )}
 
         {hasShipment && hasAwb && (
@@ -217,6 +283,73 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
           Order must be marked as paid before it can be pushed to Shiprocket.
         </p>
       )}
+
+      {/* Courier selection */}
+      <Dialog open={courierModalOpen} onOpenChange={setCourierModalOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Select Courier Partner</DialogTitle>
+            <DialogDescription>
+              {courierContext
+                ? `To ${courierContext.deliveryPincode} · ${courierContext.weightKg} kg · order ₹${courierContext.orderValue.toLocaleString()}`
+                : "Serviceable couriers for this order, cheapest first."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {couriersLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : couriers.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No serviceable couriers found for this pincode.
+            </p>
+          ) : (
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+              {couriers.map((c, i) => (
+                <div
+                  key={c.courier_company_id}
+                  className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
+                    i === 0 ? "border-primary/50 bg-primary/5" : "border-border"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <span className="truncate">{c.courier_name}</span>
+                      {i === 0 && (
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          Cheapest
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.etd ? `ETD ${c.etd}` : null}
+                      {c.etd && c.estimated_delivery_days ? " · " : null}
+                      {c.estimated_delivery_days
+                        ? `${c.estimated_delivery_days} days`
+                        : null}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-sm font-semibold">₹{c.rate}</span>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSelectCourier(c)}
+                      disabled={assigningCourierId !== null}
+                    >
+                      {assigningCourierId === c.courier_company_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Ship"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Tracking timeline */}
       {activities.length > 0 && (
