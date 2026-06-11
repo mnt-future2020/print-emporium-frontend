@@ -8,6 +8,8 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  Copy,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -249,14 +251,16 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Any random string. Add{" "}
-              <code className="px-1 py-0.5 rounded bg-muted text-[11px]">
-                ?token=&lt;value&gt;
-              </code>{" "}
-              to your Shiprocket webhook URL.
+              A random secret string. Shiprocket sends this in the webhook
+              header so we can verify the request is genuine.
             </p>
           </div>
         </div>
+
+        <Separator />
+
+        {/* Webhook URL helper */}
+        <WebhookUrlHelper />
 
         <Separator />
 
@@ -287,5 +291,96 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function WebhookUrlHelper() {
+  const [copied, setCopied] = useState(false);
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+      ? "http://localhost:5000"
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "");
+
+  const webhookUrl = `${backendUrl}/api/shiprocket/webhook`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* noop */
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-primary" />
+        <p className="text-sm font-medium">Webhook Setup</p>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Go to{" "}
+        <span className="font-medium text-foreground">
+          Shiprocket → Settings → Webhooks
+        </span>{" "}
+        and configure these values:
+      </p>
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+              URL
+            </p>
+            <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
+              <code className="text-xs font-mono truncate flex-1">
+                {webhookUrl}
+              </code>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 shrink-0"
+                onClick={copy}
+              >
+                <Copy className="h-3 w-3" />
+                <span className="ml-1 text-[10px]">
+                  {copied ? "Copied!" : "Copy"}
+                </span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+              Auth Token Type
+            </p>
+            <div className="rounded-md border border-border bg-background px-3 py-2">
+              <code className="text-xs font-mono">x-api-key</code>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+              Token
+            </p>
+            <div className="rounded-md border border-border bg-background px-3 py-2">
+              <p className="text-xs text-muted-foreground italic">
+                Same value as Webhook Token above
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
