@@ -210,6 +210,8 @@ export function OrdersTab({ user }: OrdersTabProps) {
   const [isReordering, setIsReordering] = useState<string | null>(null);
   const [reorderConfirmOpen, setReorderConfirmOpen] = useState(false);
   const [reorderId, setReorderId] = useState<string | null>(null);
+  const [cashPaidConfirmOpen, setCashPaidConfirmOpen] = useState(false);
+  const [cashPaidOrder, setCashPaidOrder] = useState<{ _id: string; orderNumber: string } | null>(null);
 
   // PDF & Shipping State
   const [markAsShippedOpen, setMarkAsShippedOpen] = useState(false);
@@ -382,23 +384,30 @@ export function OrdersTab({ user }: OrdersTabProps) {
     }
   };
 
-  const handleMarkCashPaid = async (order: { _id: string; orderNumber: string }) => {
-    if (!confirm(`Mark order #${order.orderNumber} as paid by cash?`)) return;
+  const handleMarkCashPaid = (order: { _id: string; orderNumber: string }) => {
+    setCashPaidOrder(order);
+    setCashPaidConfirmOpen(true);
+  };
+
+  const confirmCashPaid = async () => {
+    if (!cashPaidOrder) return;
     try {
       const response = await axiosInstance.put(
-        `/api/orders/admin/${order._id}/status`,
+        `/api/orders/admin/${cashPaidOrder._id}/status`,
         { paymentStatus: "paid", paymentMethod: "cash", status: "confirmed" },
       );
       if (response.data.success) {
-        toast.success(`Order #${order.orderNumber} marked as paid (cash)`);
+        toast.success(`Order #${cashPaidOrder.orderNumber} marked as paid (cash)`);
         fetchOrders();
-        if (selectedOrder?._id === order._id) {
+        if (selectedOrder?._id === cashPaidOrder._id) {
           setSelectedOrder({ ...selectedOrder, paymentStatus: "paid", paymentMethod: "cash", status: "confirmed" });
         }
       }
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       toast.error(axiosErr?.response?.data?.message || "Failed to update payment status");
+    } finally {
+      setCashPaidOrder(null);
     }
   };
 
@@ -1594,6 +1603,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
         title="Reorder Confirmation"
         description="Are you sure you want to reorder this previous order? All items and delivery details will be copied to a new order."
         confirmLabel="Reorder Now"
+        variant="default"
+      />
+
+      <ConfirmationModal
+        isOpen={cashPaidConfirmOpen}
+        onClose={() => {
+          setCashPaidConfirmOpen(false);
+          setCashPaidOrder(null);
+        }}
+        onConfirm={confirmCashPaid}
+        title="Mark as Paid (Cash)"
+        description={`Mark order #${cashPaidOrder?.orderNumber || ""} as paid by cash? This will confirm the order and set the payment method to cash.`}
+        confirmLabel="Confirm Cash Payment"
         variant="default"
       />
     </div>
