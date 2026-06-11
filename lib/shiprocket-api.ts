@@ -74,7 +74,7 @@ export const getOrderCouriers = async (
   orderId: string,
 ): Promise<OrderCouriersResult> => {
   const res = await axiosInstance.get(
-    `/api/shiprocket/orders/${orderId}/couriers`,
+    `/api/shipping/orders/${orderId}/couriers`,
   );
   return res.data;
 };
@@ -85,7 +85,7 @@ export const checkServiceability = async (params: {
   weight?: number;
   cod?: number;
 }): Promise<ServiceabilityResult> => {
-  const res = await axiosInstance.get("/api/shiprocket/serviceability", {
+  const res = await axiosInstance.get("/api/shipping/serviceability", {
     params: {
       pickup: params.pickup,
       delivery: params.delivery,
@@ -97,13 +97,13 @@ export const checkServiceability = async (params: {
 };
 
 export const pushOrderToShiprocket = async (orderId: string) => {
-  const res = await axiosInstance.post(`/api/shiprocket/orders/${orderId}/push`);
+  const res = await axiosInstance.post(`/api/shipping/orders/${orderId}/push`);
   return res.data as { success: boolean; shiprocket: ShiprocketMeta; raw?: unknown };
 };
 
 export const assignOrderAwb = async (orderId: string, courierId?: number) => {
   const res = await axiosInstance.post(
-    `/api/shiprocket/orders/${orderId}/awb`,
+    `/api/shipping/orders/${orderId}/awb`,
     courierId ? { courierId } : {},
   );
   return res.data as { success: boolean; shiprocket: ShiprocketMeta; raw?: unknown };
@@ -111,17 +111,17 @@ export const assignOrderAwb = async (orderId: string, courierId?: number) => {
 
 export const schedulePickup = async (orderId: string) => {
   const res = await axiosInstance.post(
-    `/api/shiprocket/orders/${orderId}/pickup`,
+    `/api/shipping/orders/${orderId}/pickup`,
   );
   return res.data as { success: boolean; raw?: unknown };
 };
 
 export const trackOrder = async (orderId: string): Promise<TrackingResponse> => {
-  const res = await axiosInstance.get(`/api/shiprocket/orders/${orderId}/track`);
+  const res = await axiosInstance.get(`/api/shipping/orders/${orderId}/track`);
   return res.data;
 };
 
 export const fetchLabel = async (orderId: string) => {
-  const res = await axiosInstance.get(`/api/shiprocket/orders/${orderId}/label`);
+  const res = await axiosInstance.get(`/api/shipping/orders/${orderId}/label`);
   return res.data as { success: boolean; labelUrl?: string | null; raw?: unknown };
 };

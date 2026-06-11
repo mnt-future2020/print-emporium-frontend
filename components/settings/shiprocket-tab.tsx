@@ -307,7 +307,7 @@ function WebhookUrlHelper() {
         ? window.location.origin
         : "");
 
-  const webhookUrl = `${backendUrl}/api/shiprocket/webhook`;
+  const webhookUrl = `${backendUrl}/api/shipping/webhook`;
 
   const copy = async () => {
     try {
