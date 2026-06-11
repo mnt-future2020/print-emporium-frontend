@@ -21,6 +21,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { axiosInstance } from "@/lib/axios";
@@ -32,6 +39,15 @@ interface ShiprocketSettings {
   pickupLocation: string;
   pickupPincode: string;
   webhookToken: string;
+}
+
+interface PickupLocation {
+  id: number;
+  nickname: string;
+  pincode: string;
+  address?: string;
+  city?: string;
+  state?: string;
 }
 
 interface ShiprocketTabProps {
@@ -51,6 +67,8 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showWebhook, setShowWebhook] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [pickupLocations, setPickupLocations] = useState<PickupLocation[]>([]);
+  const [pickupLocationsLoading, setPickupLocationsLoading] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -80,8 +98,23 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
     }
   }, [onMessage]);
 
+  const fetchPickupLocations = useCallback(async () => {
+    setPickupLocationsLoading(true);
+    try {
+      const res = await axiosInstance.get("/api/settings/shiprocket/pickup-locations");
+      if (res.data.success) {
+        setPickupLocations(res.data.locations || []);
+      }
+    } catch {
+      // Silently fail — fields stay as text inputs if creds aren't saved yet
+    } finally {
+      setPickupLocationsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadSettings();
+    fetchPickupLocations();
   }, []);
 
   const handleChange = (field: keyof ShiprocketSettings, value: string | boolean) => {
@@ -195,22 +228,52 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
             </p>
           </div>
 
-          {/* Pickup Location */}
+          {/* Pickup Location (from Shiprocket) */}
           <div className="space-y-2">
-            <Label htmlFor="pickupLocation">Pickup Location Nickname</Label>
-            <Input
-              id="pickupLocation"
-              value={settings.pickupLocation}
-              onChange={(e) => handleChange("pickupLocation", e.target.value)}
-              placeholder="Primary"
-            />
+            <Label>Pickup Location</Label>
+            {pickupLocationsLoading ? (
+              <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-border bg-background text-sm text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading from Shiprocket...
+              </div>
+            ) : pickupLocations.length > 0 ? (
+              <Select
+                value={settings.pickupLocation}
+                onValueChange={(val) => {
+                  const loc = pickupLocations.find((l) => l.nickname === val);
+                  handleChange("pickupLocation", val);
+                  if (loc) handleChange("pickupPincode", loc.pincode);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pickup address" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pickupLocations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.nickname}>
+                      <span className="font-medium">{loc.nickname}</span>
+                      <span className="text-muted-foreground ml-2">
+                        — {loc.pincode} · {loc.city}, {loc.state}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={settings.pickupLocation}
+                onChange={(e) => handleChange("pickupLocation", e.target.value)}
+                placeholder="Primary"
+              />
+            )}
             <p className="text-xs text-muted-foreground">
-              The nickname of the pickup address configured in Shiprocket
-              (Settings → Pickup Addresses). Typically &quot;Primary&quot;.
+              {pickupLocations.length > 0
+                ? "Fetched from your Shiprocket account. Selecting a location auto-fills the pincode."
+                : "Save valid credentials first to load pickup addresses from Shiprocket."}
             </p>
           </div>
 
-          {/* Pickup Pincode */}
+          {/* Pickup Pincode (auto-filled from selection, or manual) */}
           <div className="space-y-2">
             <Label htmlFor="pickupPincode">Pickup Pincode</Label>
             <Input
@@ -218,10 +281,13 @@ export function ShiprocketTab({ onMessage }: ShiprocketTabProps) {
               value={settings.pickupPincode}
               onChange={(e) => handleChange("pickupPincode", e.target.value)}
               placeholder="600001"
+              readOnly={pickupLocations.length > 0}
+              className={pickupLocations.length > 0 ? "bg-muted cursor-not-allowed" : ""}
             />
             <p className="text-xs text-muted-foreground">
-              The 6-digit pincode of your pickup address. Required to look up
-              couriers and rates for an order.
+              {pickupLocations.length > 0
+                ? "Auto-filled from the selected pickup location."
+                : "The 6-digit pincode of your pickup address."}
             </p>
           </div>
 
