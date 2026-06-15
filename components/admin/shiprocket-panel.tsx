@@ -610,53 +610,42 @@ function CourierSelectionDialog({
 }
 
 function courierTotal(c: ShiprocketCourier): number {
-  const freight = Number(c.freight_charge) || 0;
-  const cod = Number(c.cod_charges) || 0;
-  const coverage = Number(c.coverage_charges) || 0;
-  const other = Number(c.other_charges) || 0;
-  const sum = freight + cod + coverage + other;
-  // If individual charges sum to more than rate, use the sum; otherwise use rate
-  // (rate may already be the total in some API versions)
-  return sum > c.rate ? sum : c.rate;
+  return c.total_charges || c.rate;
 }
 
 function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
   const total = courierTotal(c);
   const freight = Number(c.freight_charge) || 0;
-  const other = Number(c.other_charges) || 0;
-  const cod = Number(c.cod_charges) || 0;
-  const coverage = Number(c.coverage_charges) || 0;
-  const hasBreakdown = freight > 0 && total !== freight;
+  const hasBreakdown = freight > 0 && total > freight;
+
+  // Collect all charge fields dynamically for the tooltip
+  const charges: { label: string; amount: number }[] = [];
+  for (const [key, val] of Object.entries(c)) {
+    if ((key.endsWith("_charge") || key.endsWith("_charges")) && key !== "rto_charges" && key !== "total_charges") {
+      const n = Number(val);
+      if (n > 0) {
+        const label = key
+          .replace(/_charges?$/, "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (ch) => ch.toUpperCase());
+        charges.push({ label, amount: n });
+      }
+    }
+  }
 
   return (
     <div className="text-right group relative">
       <p className="text-sm font-bold cursor-default">
         ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
-      {hasBreakdown && (
-        <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-48 rounded-lg border border-border bg-popover p-3 shadow-lg text-xs space-y-1">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Freight</span>
-            <span>₹{freight.toFixed(2)}</span>
-          </div>
-          {other > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Other charges</span>
-              <span>₹{other.toFixed(2)}</span>
+      {hasBreakdown && charges.length > 1 && (
+        <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-52 rounded-lg border border-border bg-popover p-3 shadow-lg text-xs space-y-1">
+          {charges.map((ch) => (
+            <div key={ch.label} className="flex justify-between">
+              <span className="text-muted-foreground">{ch.label}</span>
+              <span>₹{ch.amount.toFixed(2)}</span>
             </div>
-          )}
-          {cod > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">COD charges</span>
-              <span>₹{cod.toFixed(2)}</span>
-            </div>
-          )}
-          {coverage > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Coverage</span>
-              <span>₹{coverage.toFixed(2)}</span>
-            </div>
-          )}
+          ))}
           <div className="flex justify-between font-semibold pt-1 border-t border-border">
             <span>Total</span>
             <span>₹{total.toFixed(2)}</span>

@@ -19,6 +19,7 @@ export interface ShiprocketCourier {
   is_recommended?: boolean;
   suppress_date?: string;
   expected_pickup_date?: string;
+  total_charges?: number;
   // Allow any extra fields the API returns
   [key: string]: unknown;
 }
