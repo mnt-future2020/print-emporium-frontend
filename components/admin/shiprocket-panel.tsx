@@ -625,7 +625,6 @@ function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
       const n = Number(val);
       if (n > 0) {
         const label = key
-          .replace(/_charges?$/, "")
           .replace(/_/g, " ")
           .replace(/\b\w/g, (ch) => ch.toUpperCase());
         charges.push({ label, amount: n });
@@ -635,21 +634,21 @@ function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
 
   return (
     <div className="text-right group relative">
-      <p className="text-sm font-bold cursor-default">
+      <p className="text-sm font-bold cursor-default flex items-center justify-end gap-1">
         ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {hasBreakdown && charges.length > 1 && (
+          <svg className="h-3.5 w-3.5 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+          </svg>
+        )}
       </p>
       {hasBreakdown && charges.length > 1 && (
-        <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-52 rounded-lg border border-border bg-popover p-3 shadow-lg text-xs space-y-1">
+        <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-auto min-w-44 rounded-md border border-border bg-popover py-2 px-3 shadow-md text-xs space-y-1.5">
           {charges.map((ch) => (
-            <div key={ch.label} className="flex justify-between">
-              <span className="text-muted-foreground">{ch.label}</span>
-              <span>₹{ch.amount.toFixed(2)}</span>
-            </div>
+            <p key={ch.label} className="text-muted-foreground whitespace-nowrap">
+              {ch.label} : <span className="text-foreground font-medium">₹ {ch.amount.toFixed(2)}</span>
+            </p>
           ))}
-          <div className="flex justify-between font-semibold pt-1 border-t border-border">
-            <span>Total</span>
-            <span>₹{total.toFixed(2)}</span>
-          </div>
         </div>
       )}
     </div>
