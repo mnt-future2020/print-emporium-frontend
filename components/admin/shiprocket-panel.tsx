@@ -620,8 +620,13 @@ function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
 
   const chargeLabels: Record<string, string> = {
     freight_charge: "Freight charges",
+    freight_charges: "Freight charges",
+    whatsapp_charge: "Notify Charges",
     whatsapp_charges: "Notify Charges",
+    notify_charges: "Notify Charges",
+    cod_charge: "COD charges",
     cod_charges: "COD charges",
+    coverage_charge: "Coverage charges",
     coverage_charges: "Coverage charges",
     call_before_delivery_charges: "Call Before Delivery",
   };
@@ -631,7 +636,8 @@ function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
     if ((key.endsWith("_charge") || key.endsWith("_charges")) && key !== "rto_charges" && key !== "total_charges") {
       const n = Number(val);
       if (n > 0) {
-        const label = chargeLabels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+        const lowerKey = key.toLowerCase();
+        const label = chargeLabels[lowerKey] || chargeLabels[key] || key.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
         charges.push({ label, amount: n });
       }
     }
