@@ -18,6 +18,13 @@ import {
   FileText,
   RefreshCw,
   ExternalLink,
+  Star,
+  Plane,
+  Ship,
+  MapPin,
+  Weight,
+  IndianRupee,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -285,71 +292,15 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
       )}
 
       {/* Courier selection */}
-      <Dialog open={courierModalOpen} onOpenChange={setCourierModalOpen}>
-        <DialogContent className="sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>Select Courier Partner</DialogTitle>
-            <DialogDescription>
-              {courierContext
-                ? `To ${courierContext.deliveryPincode} · ${courierContext.weightKg} kg · order ₹${courierContext.orderValue.toLocaleString()}`
-                : "Serviceable couriers for this order, cheapest first."}
-            </DialogDescription>
-          </DialogHeader>
-
-          {couriersLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : couriers.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No serviceable couriers found for this pincode.
-            </p>
-          ) : (
-            <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
-              {couriers.map((c, i) => (
-                <div
-                  key={c.courier_company_id}
-                  className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
-                    i === 0 ? "border-primary/50 bg-primary/5" : "border-border"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <span className="truncate">{c.courier_name}</span>
-                      {i === 0 && (
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                          Cheapest
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {c.etd ? `ETD ${c.etd}` : null}
-                      {c.etd && c.estimated_delivery_days ? " · " : null}
-                      {c.estimated_delivery_days
-                        ? `${c.estimated_delivery_days} days`
-                        : null}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-semibold">₹{c.rate}</span>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSelectCourier(c)}
-                      disabled={assigningCourierId !== null}
-                    >
-                      {assigningCourierId === c.courier_company_id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Ship"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CourierSelectionDialog
+        open={courierModalOpen}
+        onOpenChange={setCourierModalOpen}
+        couriers={couriers}
+        context={courierContext}
+        loading={couriersLoading}
+        assigningCourierId={assigningCourierId}
+        onSelect={handleSelectCourier}
+      />
 
       {/* Tracking timeline */}
       {activities.length > 0 && (
@@ -397,6 +348,248 @@ function Meta({ label, value, mono }: { label: string; value: string; mono?: boo
       <p className={`truncate font-medium ${mono ? "font-mono" : ""}`} title={value}>
         {value}
       </p>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Courier Selection Dialog (Shiprocket-style)
+// ──────────────────────────────────────────────────────────────
+
+type CourierTab = "recommended" | "air" | "surface" | "all";
+
+function CourierSelectionDialog({
+  open,
+  onOpenChange,
+  couriers,
+  context,
+  loading,
+  assigningCourierId,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  couriers: ShiprocketCourier[];
+  context: OrderCouriersResult["context"] | null;
+  loading: boolean;
+  assigningCourierId: number | null;
+  onSelect: (c: ShiprocketCourier) => void;
+}) {
+  const [tab, setTab] = useState<CourierTab>("all");
+
+  const recommended = couriers.filter((c) => c.is_recommended);
+  const air = couriers.filter((c) => c.courier_type?.toLowerCase() === "air");
+  const surface = couriers.filter((c) => c.courier_type?.toLowerCase() === "surface");
+
+  const filtered =
+    tab === "recommended" && recommended.length > 0
+      ? recommended
+      : tab === "air"
+        ? air
+        : tab === "surface"
+          ? surface
+          : couriers;
+
+  const cheapestRate = couriers.length > 0 ? Math.min(...couriers.map((c) => c.rate)) : 0;
+
+  const tabs: { key: CourierTab; label: string; count: number }[] = [
+    { key: "recommended", label: "Recommended", count: recommended.length },
+    { key: "air", label: "Air", count: air.length },
+    { key: "surface", label: "Surface", count: surface.length },
+    { key: "all", label: "All", count: couriers.length },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[780px] p-0 gap-0 max-h-[85vh] flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          <DialogTitle className="text-xl">Select Courier Partner</DialogTitle>
+          {context && (
+            <div className="flex flex-wrap gap-4 pt-2">
+              <ContextChip icon={MapPin} label="Deliver To" value={context.deliveryPincode} />
+              <ContextChip icon={Weight} label="Weight" value={`${context.weightKg} kg`} />
+              <ContextChip icon={IndianRupee} label="Order Value" value={`₹${context.orderValue.toLocaleString()}`} />
+              <ContextChip icon={Package} label="Payment" value="Prepaid" />
+            </div>
+          )}
+        </DialogHeader>
+
+        {/* Tabs */}
+        <div className="flex border-b border-border px-6 shrink-0">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-1.5 text-[10px] font-semibold bg-muted rounded-full px-1.5 py-0.5">
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No {tab !== "all" ? tab : ""} couriers found for this pincode.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {/* Best performing info banner */}
+              {tab === "recommended" && recommended.length > 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-foreground mb-2">
+                  <Star className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <p>
+                    <span className="font-semibold">Best performing couriers</span> — selected based on
+                    delivery performance and rating for this pincode.
+                  </p>
+                </div>
+              )}
+
+              {/* Table header */}
+              <div className="grid grid-cols-[1fr_60px_90px_90px_80px_80px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <span>Courier Partner</span>
+                <span className="text-center">Rating</span>
+                <span>Pickup</span>
+                <span>Est. Delivery</span>
+                <span className="text-right">Charges</span>
+                <span className="text-right">Action</span>
+              </div>
+
+              {/* Courier rows */}
+              {filtered.map((c, i) => {
+                const isCheapest = c.rate === cheapestRate;
+                const isRecommended = c.is_recommended || (tab === "all" && i === 0 && recommended.length === 0);
+                const ratingColor =
+                  (c.rating || 0) >= 4
+                    ? "bg-green-500"
+                    : (c.rating || 0) >= 3
+                      ? "bg-yellow-500"
+                      : "bg-red-500";
+
+                return (
+                  <div
+                    key={c.courier_company_id}
+                    className={`grid grid-cols-[1fr_60px_90px_90px_80px_80px] gap-2 items-center rounded-lg border p-3 transition-colors ${
+                      isRecommended
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border hover:border-primary/20 hover:bg-muted/30"
+                    }`}
+                  >
+                    {/* Courier info */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
+                          {c.courier_type?.toLowerCase() === "air" ? (
+                            <Plane className="h-3 w-3 text-muted-foreground" />
+                          ) : (
+                            <Ship className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                            {c.courier_name}
+                            {isRecommended && (
+                              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground">
+                                Recommended
+                              </span>
+                            )}
+                            {isCheapest && !isRecommended && (
+                              <span className="shrink-0 rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-[9px] font-bold text-green-700 dark:text-green-300">
+                                Cheapest
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {c.courier_type || "—"}
+                            {c.min_weight ? ` · Min: ${c.min_weight} kg` : ""}
+                            {c.rto_charges ? ` · RTO: ₹${c.rto_charges}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rating */}
+                    <div className="flex justify-center">
+                      {c.rating ? (
+                        <div className={`w-8 h-8 rounded-full ${ratingColor} text-white flex items-center justify-center text-xs font-bold`}>
+                          {c.rating.toFixed(1)}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+
+                    {/* Pickup */}
+                    <p className="text-xs text-muted-foreground">
+                      {c.expected_pickup_date || c.pickup_availability || "Tomorrow"}
+                    </p>
+
+                    {/* Delivery */}
+                    <div>
+                      <p className="text-xs font-medium">{c.etd || "—"}</p>
+                      {c.estimated_delivery_days && (
+                        <p className="text-[10px] text-muted-foreground">{c.estimated_delivery_days} days</p>
+                      )}
+                    </div>
+
+                    {/* Rate */}
+                    <p className="text-sm font-bold text-right">
+                      ₹{c.rate.toLocaleString()}
+                    </p>
+
+                    {/* Action */}
+                    <div className="text-right">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs px-3"
+                        onClick={() => onSelect(c)}
+                        disabled={assigningCourierId !== null}
+                      >
+                        {assigningCourierId === c.courier_company_id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          "Ship Now"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!loading && filtered.length > 0 && (
+          <div className="px-6 py-3 border-t border-border text-xs text-muted-foreground shrink-0">
+            {filtered.length} courier{filtered.length > 1 ? "s" : ""} found
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ContextChip({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      <span className="text-muted-foreground">{label}:</span>
+      <span className="font-semibold text-foreground">{value}</span>
     </div>
   );
 }

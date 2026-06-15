@@ -1323,8 +1323,19 @@ export function OrdersTab({ user }: OrdersTabProps) {
                   {isAdminOrEmployee && (
                     <ShiprocketPanel
                       order={selectedOrder}
-                      onUpdated={() => {
+                      onUpdated={async () => {
                         fetchOrders();
+                        try {
+                          const endpoint = isAdminOrEmployee
+                            ? `/api/orders/admin/${selectedOrder._id}`
+                            : `/api/orders/${selectedOrder._id}`;
+                          const res = await axiosInstance.get(endpoint);
+                          if (res.data.success && res.data.order) {
+                            setSelectedOrder(res.data.order);
+                          }
+                        } catch {
+                          // list refresh is enough
+                        }
                       }}
                     />
                   )}

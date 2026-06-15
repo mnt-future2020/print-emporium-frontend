@@ -3,11 +3,20 @@ import { axiosInstance } from "./axios";
 export interface ShiprocketCourier {
   courier_company_id: number;
   courier_name: string;
+  courier_type?: string;
   rate: number;
   etd?: string;
   estimated_delivery_days?: string;
   freight_charge?: number;
   cod_charges?: number;
+  charge_weight?: number;
+  min_weight?: number;
+  rto_charges?: number;
+  rating?: number;
+  pickup_availability?: string;
+  is_recommended?: boolean;
+  suppress_date?: string;
+  expected_pickup_date?: string;
 }
 
 export interface ServiceabilityResult {
