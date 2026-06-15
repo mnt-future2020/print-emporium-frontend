@@ -416,7 +416,7 @@ function CourierSelectionDialog({
           ? surface
           : withType;
 
-  const cheapestRate = withType.length > 0 ? Math.min(...withType.map((c) => c.rate)) : 0;
+  const cheapestRate = withType.length > 0 ? Math.min(...withType.map((c) => courierTotal(c))) : 0;
   const pickupLabel = fmtPickup();
 
   const tabs: { key: CourierTab; label: string; count: number }[] = [
@@ -498,7 +498,7 @@ function CourierSelectionDialog({
 
               {/* Courier rows */}
               {filtered.map((c) => {
-                const isCheapest = c.rate === cheapestRate;
+                const isCheapest = courierTotal(c) === cheapestRate;
                 const isRecommended = c._isRecommended;
                 const ratingColor =
                   (c.rating || 0) >= 4
@@ -574,9 +574,7 @@ function CourierSelectionDialog({
                     </div>
 
                     {/* Rate */}
-                    <p className="text-sm font-bold text-right">
-                      ₹{c.rate.toLocaleString()}
-                    </p>
+                    <ChargesCell courier={c} />
 
                     {/* Action */}
                     <div className="text-right">
@@ -608,6 +606,64 @@ function CourierSelectionDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function courierTotal(c: ShiprocketCourier): number {
+  const freight = Number(c.freight_charge) || 0;
+  const cod = Number(c.cod_charges) || 0;
+  const coverage = Number(c.coverage_charges) || 0;
+  const other = Number(c.other_charges) || 0;
+  const sum = freight + cod + coverage + other;
+  // If individual charges sum to more than rate, use the sum; otherwise use rate
+  // (rate may already be the total in some API versions)
+  return sum > c.rate ? sum : c.rate;
+}
+
+function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
+  const total = courierTotal(c);
+  const freight = Number(c.freight_charge) || 0;
+  const other = Number(c.other_charges) || 0;
+  const cod = Number(c.cod_charges) || 0;
+  const coverage = Number(c.coverage_charges) || 0;
+  const hasBreakdown = freight > 0 && total !== freight;
+
+  return (
+    <div className="text-right group relative">
+      <p className="text-sm font-bold cursor-default">
+        ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
+      {hasBreakdown && (
+        <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-48 rounded-lg border border-border bg-popover p-3 shadow-lg text-xs space-y-1">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Freight</span>
+            <span>₹{freight.toFixed(2)}</span>
+          </div>
+          {other > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Other charges</span>
+              <span>₹{other.toFixed(2)}</span>
+            </div>
+          )}
+          {cod > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">COD charges</span>
+              <span>₹{cod.toFixed(2)}</span>
+            </div>
+          )}
+          {coverage > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Coverage</span>
+              <span>₹{coverage.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold pt-1 border-t border-border">
+            <span>Total</span>
+            <span>₹{total.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

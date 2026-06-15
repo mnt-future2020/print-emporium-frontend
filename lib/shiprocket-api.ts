@@ -5,10 +5,12 @@ export interface ShiprocketCourier {
   courier_name: string;
   courier_type?: string;
   rate: number;
-  etd?: string;
-  estimated_delivery_days?: string;
   freight_charge?: number;
   cod_charges?: number;
+  coverage_charges?: number;
+  other_charges?: number;
+  etd?: string;
+  estimated_delivery_days?: string;
   charge_weight?: number;
   min_weight?: number;
   rto_charges?: number;
@@ -17,6 +19,8 @@ export interface ShiprocketCourier {
   is_recommended?: boolean;
   suppress_date?: string;
   expected_pickup_date?: string;
+  // Allow any extra fields the API returns
+  [key: string]: unknown;
 }
 
 export interface ServiceabilityResult {
