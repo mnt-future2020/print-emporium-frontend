@@ -90,6 +90,7 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
   const [couriersLoading, setCouriersLoading] = useState(false);
   const [couriers, setCouriers] = useState<ShiprocketCourier[]>([]);
   const [courierContext, setCourierContext] = useState<OrderCouriersResult["context"] | null>(null);
+  const [recommendedId, setRecommendedId] = useState<number | null>(null);
   const [assigningCourierId, setAssigningCourierId] = useState<number | null>(null);
 
   const run = async <T,>(key: ActionKey, fn: () => Promise<T>, successMsg: string) => {
@@ -116,10 +117,12 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
     setCouriersLoading(true);
     setCouriers([]);
     setCourierContext(null);
+    setRecommendedId(null);
     try {
       const result = await getOrderCouriers(order._id);
       setCouriers(result.couriers || []);
       setCourierContext(result.context || null);
+      setRecommendedId(result.recommendedId ?? null);
       if (!result.couriers?.length) {
         toast.error("No serviceable couriers for this pincode");
       }
@@ -297,6 +300,7 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
         onOpenChange={setCourierModalOpen}
         couriers={couriers}
         context={courierContext}
+        recommendedId={recommendedId}
         loading={couriersLoading}
         assigningCourierId={assigningCourierId}
         onSelect={handleSelectCourier}
@@ -358,11 +362,25 @@ function Meta({ label, value, mono }: { label: string; value: string; mono?: boo
 
 type CourierTab = "recommended" | "air" | "surface" | "all";
 
+const inferCourierType = (name: string): "air" | "surface" | "unknown" => {
+  const lower = name.toLowerCase();
+  if (lower.includes("surface")) return "surface";
+  if (lower.includes("air") || lower.includes("express") || lower.includes("priority")) return "air";
+  return "unknown";
+};
+
+const fmtPickup = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+};
+
 function CourierSelectionDialog({
   open,
   onOpenChange,
   couriers,
   context,
+  recommendedId,
   loading,
   assigningCourierId,
   onSelect,
@@ -371,15 +389,22 @@ function CourierSelectionDialog({
   onOpenChange: (v: boolean) => void;
   couriers: ShiprocketCourier[];
   context: OrderCouriersResult["context"] | null;
+  recommendedId: number | null;
   loading: boolean;
   assigningCourierId: number | null;
   onSelect: (c: ShiprocketCourier) => void;
 }) {
   const [tab, setTab] = useState<CourierTab>("all");
 
-  const recommended = couriers.filter((c) => c.is_recommended);
-  const air = couriers.filter((c) => c.courier_type?.toLowerCase() === "air");
-  const surface = couriers.filter((c) => c.courier_type?.toLowerCase() === "surface");
+  const withType = couriers.map((c) => ({
+    ...c,
+    _type: c.courier_type || inferCourierType(c.courier_name),
+    _isRecommended: recommendedId ? c.courier_company_id === recommendedId : false,
+  }));
+
+  const recommended = withType.filter((c) => c._isRecommended);
+  const air = withType.filter((c) => c._type === "air");
+  const surface = withType.filter((c) => c._type === "surface");
 
   const filtered =
     tab === "recommended" && recommended.length > 0
@@ -388,9 +413,10 @@ function CourierSelectionDialog({
         ? air
         : tab === "surface"
           ? surface
-          : couriers;
+          : withType;
 
-  const cheapestRate = couriers.length > 0 ? Math.min(...couriers.map((c) => c.rate)) : 0;
+  const cheapestRate = withType.length > 0 ? Math.min(...withType.map((c) => c.rate)) : 0;
+  const pickupLabel = fmtPickup();
 
   const tabs: { key: CourierTab; label: string; count: number }[] = [
     { key: "recommended", label: "Recommended", count: recommended.length },
@@ -470,15 +496,15 @@ function CourierSelectionDialog({
               </div>
 
               {/* Courier rows */}
-              {filtered.map((c, i) => {
+              {filtered.map((c) => {
                 const isCheapest = c.rate === cheapestRate;
-                const isRecommended = c.is_recommended || (tab === "all" && i === 0 && recommended.length === 0);
+                const isRecommended = c._isRecommended;
                 const ratingColor =
                   (c.rating || 0) >= 4
                     ? "bg-green-500"
                     : (c.rating || 0) >= 3
                       ? "bg-yellow-500"
-                      : "bg-red-500";
+                      : "bg-orange-500";
 
                 return (
                   <div
@@ -493,7 +519,7 @@ function CourierSelectionDialog({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <div className="shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-                          {c.courier_type?.toLowerCase() === "air" ? (
+                          {c._type === "air" ? (
                             <Plane className="h-3 w-3 text-muted-foreground" />
                           ) : (
                             <Ship className="h-3 w-3 text-muted-foreground" />
@@ -514,8 +540,8 @@ function CourierSelectionDialog({
                             )}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
-                            {c.courier_type || "—"}
-                            {c.min_weight ? ` · Min: ${c.min_weight} kg` : ""}
+                            {c._type !== "unknown" ? c._type.charAt(0).toUpperCase() + c._type.slice(1) : "—"}
+                            {c.min_weight ? ` · Min: ${c.min_weight} kg` : c.charge_weight ? ` · ${c.charge_weight} kg` : ""}
                             {c.rto_charges ? ` · RTO: ₹${c.rto_charges}` : ""}
                           </p>
                         </div>
@@ -535,7 +561,7 @@ function CourierSelectionDialog({
 
                     {/* Pickup */}
                     <p className="text-xs text-muted-foreground">
-                      {c.expected_pickup_date || c.pickup_availability || "Tomorrow"}
+                      {c.suppress_date || c.expected_pickup_date || pickupLabel}
                     </p>
 
                     {/* Delivery */}

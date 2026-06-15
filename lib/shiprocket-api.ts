@@ -76,6 +76,7 @@ export interface OrderCouriersResult {
     weightKg: number;
     orderValue: number;
   };
+  recommendedId?: number | null;
   couriers: ShiprocketCourier[];
 }
 
