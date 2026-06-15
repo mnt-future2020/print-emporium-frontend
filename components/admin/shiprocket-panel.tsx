@@ -362,11 +362,10 @@ function Meta({ label, value, mono }: { label: string; value: string; mono?: boo
 
 type CourierTab = "recommended" | "air" | "surface" | "all";
 
-const inferCourierType = (name: string): "air" | "surface" | "unknown" => {
+const inferCourierType = (name: string): "air" | "surface" => {
   const lower = name.toLowerCase();
-  if (lower.includes("surface")) return "surface";
   if (lower.includes("air") || lower.includes("express") || lower.includes("priority")) return "air";
-  return "unknown";
+  return "surface";
 };
 
 const fmtPickup = () => {
@@ -398,11 +397,13 @@ function CourierSelectionDialog({
 
   const withType = couriers.map((c) => ({
     ...c,
-    _type: c.courier_type || inferCourierType(c.courier_name),
+    _type: inferCourierType(c.courier_name),
     _isRecommended: recommendedId ? c.courier_company_id === recommendedId : false,
   }));
 
-  const recommended = withType.filter((c) => c._isRecommended);
+  const recommended = withType.filter(
+    (c) => c._isRecommended || (c.rating != null && c.rating >= 4.0),
+  );
   const air = withType.filter((c) => c._type === "air");
   const surface = withType.filter((c) => c._type === "surface");
 
@@ -540,7 +541,7 @@ function CourierSelectionDialog({
                             )}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
-                            {c._type !== "unknown" ? c._type.charAt(0).toUpperCase() + c._type.slice(1) : "—"}
+                            {c._type.charAt(0).toUpperCase() + c._type.slice(1)}
                             {c.min_weight ? ` · Min: ${c.min_weight} kg` : c.charge_weight ? ` · ${c.charge_weight} kg` : ""}
                             {c.rto_charges ? ` · RTO: ₹${c.rto_charges}` : ""}
                           </p>
