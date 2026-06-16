@@ -192,8 +192,12 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
   const hasAwb = !!sr.awbCode;
   const activities: TrackingActivity[] = tracking?.shipment_track_activities || [];
 
+  // Step progress: 1=Push 2=AWB 3=Pickup 4=Done
+  const currentStep = !hasShipment ? 1 : !hasAwb ? 2 : 3;
+
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-semibold flex items-center gap-2">
           <Truck className="h-4 w-4 text-primary" />
@@ -206,94 +210,107 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
         )}
       </div>
 
-      {/* Meta */}
-      {(sr.orderId || sr.shipmentId || sr.awbCode) && (
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          {sr.orderId && (
-            <Meta label="SR Order ID" value={sr.orderId} mono />
-          )}
-          {sr.shipmentId && (
-            <Meta label="Shipment ID" value={sr.shipmentId} mono />
-          )}
-          {sr.awbCode && (
-            <Meta label="AWB" value={sr.awbCode} mono />
-          )}
-          {sr.courierName && (
-            <Meta label="Courier" value={sr.courierName} />
-          )}
-          {sr.lastStatusAt && (
-            <Meta label="Last status at" value={fmtDate(sr.lastStatusAt)} />
-          )}
-          {sr.lastSyncedAt && (
-            <Meta label="Last synced" value={fmtDate(sr.lastSyncedAt)} />
-          )}
+      {/* Step Progress */}
+      <div className="flex items-center gap-1">
+        {[
+          { step: 1, label: "Push" },
+          { step: 2, label: "AWB" },
+          { step: 3, label: "Pickup" },
+        ].map((s, i) => (
+          <div key={s.step} className="flex items-center flex-1">
+            <div className="flex items-center gap-1.5 flex-1">
+              <div
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                  currentStep > s.step
+                    ? "bg-green-500 text-white"
+                    : currentStep === s.step
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {currentStep > s.step ? "✓" : s.step}
+              </div>
+              <span className={`text-[10px] font-medium ${
+                currentStep >= s.step ? "text-foreground" : "text-muted-foreground"
+              }`}>
+                {s.label}
+              </span>
+            </div>
+            {i < 2 && (
+              <div className={`h-px flex-1 mx-1 ${
+                currentStep > s.step ? "bg-green-500" : "bg-border"
+              }`} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Meta — compact grid */}
+      {(sr.orderId || sr.awbCode) && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs p-3 rounded-md bg-muted/30">
+          {sr.awbCode && <Meta label="AWB" value={sr.awbCode} mono />}
+          {sr.courierName && <Meta label="Courier" value={sr.courierName} />}
+          {sr.orderId && <Meta label="SR Order" value={sr.orderId} mono />}
+          {sr.shipmentId && <Meta label="Shipment" value={sr.shipmentId} mono />}
+          {sr.lastSyncedAt && <Meta label="Synced" value={fmtDate(sr.lastSyncedAt)} />}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
+      {/* Current Action — prominent single CTA based on current step */}
+      <div className="space-y-2">
         {!hasShipment && (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={handlePush}
-            disabled={!canPush || busy === "push"}
-            title={canPush ? "Create the order on Shiprocket" : "Mark order as paid first"}
-          >
-            {busy === "push" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-            Push to Shiprocket
-          </Button>
-        )}
-
-        {hasShipment && !hasAwb && (
           <>
             <Button
               size="sm"
-              variant="default"
+              className="w-full"
+              onClick={handlePush}
+              disabled={!canPush || busy === "push"}
+            >
+              {busy === "push" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Push to Shiprocket
+            </Button>
+            {!canPush && (
+              <p className="text-[11px] text-muted-foreground text-center">
+                Requires paid + printing status
+              </p>
+            )}
+          </>
+        )}
+
+        {hasShipment && !hasAwb && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1"
               onClick={openCourierModal}
               disabled={!!busy || couriersLoading}
             >
-              {couriersLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <PackageCheck className="h-4 w-4 mr-2" />
-              )}
+              {couriersLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
               Select Courier
             </Button>
             <Button size="sm" variant="outline" onClick={handleAwb} disabled={busy === "awb"}>
               {busy === "awb" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
-              Auto (cheapest)
+              Auto
             </Button>
-          </>
+          </div>
         )}
 
         {hasShipment && hasAwb && (
-          <Button size="sm" variant="outline" onClick={handlePickup} disabled={busy === "pickup"}>
-            {busy === "pickup" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-2" />}
-            Schedule Pickup
-          </Button>
-        )}
-
-        {hasShipment && (
-          <Button size="sm" variant="outline" onClick={handleLabel} disabled={busy === "label"}>
-            {busy === "label" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-            {sr.labelUrl ? "Open Label" : "Generate Label"}
-          </Button>
-        )}
-
-        {hasAwb && (
-          <Button size="sm" variant="outline" onClick={handleTrack} disabled={busy === "track"}>
-            {busy === "track" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Refresh Tracking
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="flex-1" onClick={handlePickup} disabled={busy === "pickup"}>
+              {busy === "pickup" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarClock className="h-4 w-4 mr-2" />}
+              Schedule Pickup
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleLabel} disabled={busy === "label"}>
+              {busy === "label" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+              Label
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleTrack} disabled={busy === "track"}>
+              {busy === "track" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            </Button>
+          </div>
         )}
       </div>
-
-      {!canPush && !hasShipment && (
-        <p className="text-xs text-muted-foreground">
-          Order must be paid and in printing status to push to Shiprocket.
-        </p>
-      )}
 
       {/* Courier selection */}
       <CourierSelectionDialog
