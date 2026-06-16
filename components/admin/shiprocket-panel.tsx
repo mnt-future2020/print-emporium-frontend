@@ -25,7 +25,18 @@ import {
   Weight,
   IndianRupee,
   Package,
+  MoreVertical,
+  Receipt,
+  ClipboardList,
+  XCircle,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   pushOrderToShiprocket,
@@ -34,6 +45,9 @@ import {
   schedulePickup,
   trackOrder,
   fetchLabel,
+  fetchShiprocketInvoice,
+  cancelShipment,
+  fetchManifest,
   type TrackingResponse,
   type TrackingActivity,
   type ShiprocketCourier,
@@ -186,6 +200,61 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
     }
   };
 
+  const handleInvoice = async () => {
+    if (busy) return;
+    setBusy("label");
+    const toastId = toast.loading("Generating invoice...");
+    try {
+      const result = await fetchShiprocketInvoice(order._id);
+      if (result.invoiceUrl) {
+        window.open(result.invoiceUrl, "_blank", "noopener,noreferrer");
+        toast.success("Invoice opened", { id: toastId });
+      } else {
+        toast.error("No invoice URL returned", { id: toastId });
+      }
+    } catch (err) {
+      toast.error(errMsg(err, "Failed to generate invoice"), { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleManifest = async () => {
+    if (busy) return;
+    setBusy("label");
+    const toastId = toast.loading("Generating manifest...");
+    try {
+      const result = await fetchManifest(order._id);
+      if (result.manifestUrl) {
+        window.open(result.manifestUrl, "_blank", "noopener,noreferrer");
+        toast.success("Manifest opened", { id: toastId });
+        onUpdated();
+      } else {
+        toast.error("No manifest URL returned", { id: toastId });
+      }
+    } catch (err) {
+      toast.error(errMsg(err, "Failed to generate manifest"), { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleCancelShipment = async () => {
+    if (busy) return;
+    if (!confirm("Cancel this shipment on Shiprocket? This cannot be undone.")) return;
+    setBusy("push");
+    const toastId = toast.loading("Cancelling shipment...");
+    try {
+      await cancelShipment(order._id);
+      toast.success("Shipment cancelled", { id: toastId });
+      onUpdated();
+    } catch (err) {
+      toast.error(errMsg(err, "Failed to cancel shipment"), { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const isPaid = order.paymentStatus === "paid";
   const canPush = isPaid && order.status === "printing";
   const hasShipment = !!sr.shipmentId;
@@ -292,6 +361,14 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
               {busy === "awb" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PackageCheck className="h-4 w-4 mr-2" />}
               Auto
             </Button>
+            <ShiprocketMoreMenu
+              hasShipment={hasShipment}
+              hasAwb={hasAwb}
+              busy={!!busy}
+              onInvoice={handleInvoice}
+              onManifest={handleManifest}
+              onCancel={handleCancelShipment}
+            />
           </div>
         )}
 
@@ -308,6 +385,14 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
             <Button size="sm" variant="outline" onClick={handleTrack} disabled={busy === "track"}>
               {busy === "track" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             </Button>
+            <ShiprocketMoreMenu
+              hasShipment={hasShipment}
+              hasAwb={hasAwb}
+              busy={!!busy}
+              onInvoice={handleInvoice}
+              onManifest={handleManifest}
+              onCancel={handleCancelShipment}
+            />
           </div>
         )}
       </div>
@@ -681,6 +766,55 @@ function ChargesCell({ courier: c }: { courier: ShiprocketCourier }) {
         </div>
       )}
     </div>
+  );
+}
+
+function ShiprocketMoreMenu({
+  hasShipment,
+  hasAwb,
+  busy,
+  onInvoice,
+  onManifest,
+  onCancel,
+}: {
+  hasShipment: boolean;
+  hasAwb: boolean;
+  busy: boolean;
+  onInvoice: () => void;
+  onManifest: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline" className="px-2" disabled={busy}>
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {hasShipment && (
+          <DropdownMenuItem onClick={onInvoice}>
+            <Receipt className="h-4 w-4 mr-2" />
+            Download Invoice
+          </DropdownMenuItem>
+        )}
+        {hasAwb && (
+          <DropdownMenuItem onClick={onManifest}>
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Download Manifest
+          </DropdownMenuItem>
+        )}
+        {hasShipment && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onCancel} className="text-destructive focus:text-destructive">
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancel Shipment
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

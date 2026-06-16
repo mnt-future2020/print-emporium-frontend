@@ -149,6 +149,21 @@ export interface ShippingOption {
   courierId: number;
 }
 
+export const fetchShiprocketInvoice = async (orderId: string) => {
+  const res = await axiosInstance.get(`/api/shipping/orders/${orderId}/sr-invoice`);
+  return res.data as { success: boolean; invoiceUrl?: string | null };
+};
+
+export const cancelShipment = async (orderId: string) => {
+  const res = await axiosInstance.post(`/api/shipping/orders/${orderId}/cancel-shipment`);
+  return res.data as { success: boolean };
+};
+
+export const fetchManifest = async (orderId: string) => {
+  const res = await axiosInstance.post(`/api/shipping/orders/${orderId}/manifest`);
+  return res.data as { success: boolean; manifestUrl?: string | null };
+};
+
 export interface CheckoutRateResult {
   success: boolean;
   serviceable: boolean;
