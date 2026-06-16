@@ -275,6 +275,7 @@ export function ServiceFormModal({
       image: null,
       basePricePerPage: 0,
       basePriceRanges: [],
+      weightPer100Sheets: 500,
       customQuotation: false,
       printTypes: [],
       paperSizes: [],
@@ -624,6 +625,26 @@ export function ServiceFormModal({
             {errors.basePricePerPage && (
               <p className="text-xs text-red-500">{errors.basePricePerPage}</p>
             )}
+          </div>
+
+          {/* Weight per 100 Sheets */}
+          <div className="space-y-2">
+            <Label htmlFor="weightPer100Sheets" className="text-sm font-semibold">
+              Weight per 100 Sheets (grams)
+            </Label>
+            <NumberStepper
+              id="weightPer100Sheets"
+              value={formData.weightPer100Sheets || 500}
+              onChange={(v) => setFormData({ ...formData, weightPer100Sheets: v })}
+              step={10}
+              min={10}
+              max={5000}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Used for shipping weight calculation. Weigh 100 sheets and enter the
+              value. Standard A4 80 GSM ≈ 500g. A4 170 GSM ≈ 1000g. A3 80 GSM ≈ 1000g.
+            </p>
           </div>
 
           <div className="flex items-center space-x-2 border border-border/50 p-4 rounded-lg bg-muted/20">
