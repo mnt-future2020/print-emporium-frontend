@@ -187,6 +187,7 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
   };
 
   const isPaid = order.paymentStatus === "paid";
+  const canPush = isPaid && order.status === "printing";
   const hasShipment = !!sr.shipmentId;
   const hasAwb = !!sr.awbCode;
   const activities: TrackingActivity[] = tracking?.shipment_track_activities || [];
@@ -236,8 +237,8 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
             size="sm"
             variant="default"
             onClick={handlePush}
-            disabled={!isPaid || busy === "push"}
-            title={isPaid ? "Create the order on Shiprocket" : "Mark order as paid first"}
+            disabled={!canPush || busy === "push"}
+            title={canPush ? "Create the order on Shiprocket" : "Mark order as paid first"}
           >
             {busy === "push" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
             Push to Shiprocket
@@ -288,9 +289,9 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
         )}
       </div>
 
-      {!isPaid && !hasShipment && (
+      {!canPush && !hasShipment && (
         <p className="text-xs text-muted-foreground">
-          Order must be marked as paid before it can be pushed to Shiprocket.
+          Order must be paid and in printing status to push to Shiprocket.
         </p>
       )}
 
