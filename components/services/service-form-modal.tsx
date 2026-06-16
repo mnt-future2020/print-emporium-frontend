@@ -654,7 +654,7 @@ export function ServiceFormModal({
                   }}
                   placeholder="100"
                   min={1}
-                  className={cn("pr-14", errors.shippingWeight && "border-red-500")}
+                  className={cn("pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.shippingWeight && "border-red-500")}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                   sheets
@@ -671,7 +671,7 @@ export function ServiceFormModal({
                   }}
                   placeholder="500"
                   min={1}
-                  className={cn("pr-8", errors.shippingWeight && "border-red-500")}
+                  className={cn("pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.shippingWeight && "border-red-500")}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
                   g
@@ -683,39 +683,6 @@ export function ServiceFormModal({
                 ≈ {(formData.weightSampleGrams / formData.weightSampleSheets).toFixed(1)}g per sheet
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: "A4 80 GSM", sheets: 100, grams: 500 },
-                { label: "A4 170 GSM", sheets: 100, grams: 1000 },
-                { label: "A3 80 GSM", sheets: 100, grams: 1000 },
-              ].map((preset) => {
-                const isActive =
-                  formData.weightSampleSheets === preset.sheets &&
-                  formData.weightSampleGrams === preset.grams;
-                return (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        weightSampleSheets: preset.sheets,
-                        weightSampleGrams: preset.grams,
-                      });
-                      if (errors.shippingWeight) setErrors({ ...errors, shippingWeight: "" });
-                    }}
-                    className={cn(
-                      "text-[11px] px-2.5 py-1 rounded-full border transition-colors",
-                      isActive
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50",
-                    )}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
             {errors.shippingWeight && (
               <p className="text-xs text-red-500">{errors.shippingWeight}</p>
             )}
