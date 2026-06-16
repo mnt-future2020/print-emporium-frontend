@@ -167,6 +167,13 @@ interface ReviewStepProps {
   total: number;
   onBack: () => void;
   pricingSettings?: PricingSettings;
+  isLoadingRate?: boolean;
+  recommended?: { rate: number; courierName: string | null; etd: string | null; estimatedDays: string | null } | null;
+  fastest?: { rate: number; courierName: string | null; etd: string | null; estimatedDays: string | null } | null;
+  selectedShipping?: "recommended" | "fastest";
+  onShippingChange?: (v: "recommended" | "fastest") => void;
+  isServiceable?: boolean;
+  onPincodeReady?: (pincode: string) => void;
 }
 
 export function ReviewStep({
@@ -181,6 +188,13 @@ export function ReviewStep({
   total,
   onBack,
   pricingSettings,
+  isLoadingRate,
+  recommended,
+  fastest,
+  selectedShipping = "recommended",
+  onShippingChange,
+  isServiceable = true,
+  onPincodeReady,
 }: ReviewStepProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -246,6 +260,7 @@ export function ReviewStep({
         city: "",
       });
       setErrors((prev) => ({ ...prev, state: "", city: "", pincode: "" }));
+      onPincodeReady?.(pincode);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (
@@ -1139,115 +1154,110 @@ export function ReviewStep({
                   </span>
                 </div>
 
-                {pricingSettings?.isDeliveryEnabled && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground">
-                          Delivery Charge
-                        </span>
-                        {(deliveryCharge === 0 || isFreeDeliveryApplied) && (
-                          <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded uppercase">
-                            Free
-                          </span>
-                        )}
-                        {!isFreeDeliveryApplied && deliveryCharge > 0 && (
-                          <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded uppercase">
-                            Standard
-                          </span>
-                        )}
-                      </div>
-                      <span
+                {/* Shipping Options (Shiprocket) */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Shipping</span>
+                    {isLoadingRate && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                    {!isLoadingRate && !recommended && deliveryInfo.pincode?.length !== 6 && (
+                      <span className="text-xs text-muted-foreground">Enter pincode</span>
+                    )}
+                  </div>
+
+                  {!isLoadingRate && recommended && (
+                    <div className="space-y-2">
+                      {/* Recommended option */}
+                      <button
+                        type="button"
+                        onClick={() => onShippingChange?.("recommended")}
                         className={cn(
-                          "font-medium",
-                          deliveryCharge === 0 || isFreeDeliveryApplied
-                            ? "text-green-600"
-                            : "text-foreground",
+                          "w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors",
+                          selectedShipping === "recommended"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/30",
                         )}
                       >
-                        {deliveryCharge === 0 || isFreeDeliveryApplied
-                          ? "Free"
-                          : formatPrice(deliveryCharge)}
-                      </span>
-                    </div>
-
-                    {/* Delivery Progress Bar or Free Delivery Banner */}
-                    {(() => {
-                      const freeThreshold =
-                        pricingSettings.deliveryThresholds?.find(
-                          (t) => t.charge === 0,
-                        )?.minAmount;
-                      
-                      const isFree = deliveryCharge === 0 || isFreeDeliveryApplied;
-
-                      if (isFree) {
-                        return (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: "auto", scale: 1 }}
-                            transition={{ type: "spring", stiffness: 200, damping: 18 }}
-                            className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg flex items-center gap-2 relative overflow-hidden"
-                          >
-                            {/* Ambient shimmer glow */}
-                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-emerald-100/10 to-transparent animate-pulse pointer-events-none" />
-                            
-                            <motion.div
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ repeat: Infinity, repeatDelay: 3, duration: 0.6 }}
-                              className="text-emerald-600 shrink-0"
-                            >
-                              <Truck className="h-5 w-5" />
-                            </motion.div>
-                            
-                            <div className="flex-1">
-                              <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                                Free Delivery Unlocked!
-                              </p>
-                              <p className="text-[9px] text-emerald-600/90 dark:text-emerald-400/90 font-light">
-                                Congratulations! Delivery charges removed.
-                              </p>
-                            </div>
-                            
-                            {/* Ambient rotating sparkle */}
-                            <div className="absolute right-2 top-2 pointer-events-none">
-                              <motion.div
-                                animate={{ rotate: 360, scale: [0.8, 1.2, 0.8] }}
-                                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-                                className="text-emerald-400 dark:text-emerald-500"
-                              >
-                                <Sparkles className="h-3 w-3" />
-                              </motion.div>
-                            </div>
-                          </motion.div>
-                        );
-                      }
-
-                      if (freeThreshold && subtotal < freeThreshold) {
-                        const progress = (subtotal / freeThreshold) * 100;
-                        const remaining = freeThreshold - subtotal;
-                        return (
-                          <div className="pt-1">
-                            <div className="flex justify-between items-center text-[10px] mb-1">
-                              <span className="text-muted-foreground">
-                                Add {formatPrice(remaining)} for free delivery
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn(
+                            "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                            selectedShipping === "recommended" ? "border-primary" : "border-muted-foreground/40",
+                          )}>
+                            {selectedShipping === "recommended" && (
+                              <div className="w-2 h-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium flex items-center gap-1.5">
+                              {recommended.courierName || "Standard"}
+                              <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                Recommended
                               </span>
-                              <span className="font-medium text-primary">
-                                {Math.round(progress)}%
-                              </span>
+                            </p>
+                            {recommended.estimatedDays && (
+                              <p className="text-[11px] text-muted-foreground">
+                                Est. {recommended.estimatedDays} days
+                                {recommended.etd ? ` · by ${new Date(recommended.etd).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}` : ""}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold shrink-0">
+                          {formatPrice(recommended.rate)}
+                        </span>
+                      </button>
+
+                      {/* Fastest option (only if different from recommended) */}
+                      {fastest && (
+                        <button
+                          type="button"
+                          onClick={() => onShippingChange?.("fastest")}
+                          className={cn(
+                            "w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors",
+                            selectedShipping === "fastest"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/30",
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={cn(
+                              "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                              selectedShipping === "fastest" ? "border-primary" : "border-muted-foreground/40",
+                            )}>
+                              {selectedShipping === "fastest" && (
+                                <div className="w-2 h-2 rounded-full bg-primary" />
+                              )}
                             </div>
-                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border/50">
-                              <div
-                                className="h-full bg-primary transition-all duration-1000 ease-out"
-                                style={{ width: `${progress}%` }}
-                              />
+                            <div>
+                              <p className="text-sm font-medium flex items-center gap-1.5">
+                                {fastest.courierName || "Express"}
+                                <span className="text-[9px] font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded">
+                                  Fastest
+                                </span>
+                              </p>
+                              {fastest.estimatedDays && (
+                                <p className="text-[11px] text-muted-foreground">
+                                  Est. {fastest.estimatedDays} days
+                                  {fastest.etd ? ` · by ${new Date(fastest.etd).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}` : ""}
+                                </p>
+                              )}
                             </div>
                           </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
+                          <span className="text-sm font-bold shrink-0">
+                            {formatPrice(fastest.rate)}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!isLoadingRate && isServiceable === false && deliveryInfo.pincode?.length === 6 && (
+                    <p className="text-[11px] text-orange-600 font-medium p-2 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800/30">
+                      Shipping rate unavailable for this pincode. Exact charges will be confirmed after order.
+                    </p>
+                  )}
+                </div>
 
                 {pricingSettings?.isPackingEnabled && (
                   <div className="flex justify-between items-center text-sm">

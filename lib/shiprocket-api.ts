@@ -140,3 +140,27 @@ export const fetchLabel = async (orderId: string) => {
   const res = await axiosInstance.get(`/api/shipping/orders/${orderId}/label`);
   return res.data as { success: boolean; labelUrl?: string | null; raw?: unknown };
 };
+
+export interface ShippingOption {
+  rate: number;
+  courierName: string | null;
+  etd: string | null;
+  estimatedDays: string | null;
+  courierId: number;
+}
+
+export interface CheckoutRateResult {
+  success: boolean;
+  serviceable: boolean;
+  fallback: boolean;
+  recommended: ShippingOption | null;
+  fastest: ShippingOption | null;
+}
+
+export const getCheckoutRate = async (params: {
+  deliveryPincode: string;
+  items: Array<{ serviceId: string; pageCount: number; copies: number }>;
+}): Promise<CheckoutRateResult> => {
+  const res = await axiosInstance.post("/api/shipping/checkout-rate", params);
+  return res.data;
+};

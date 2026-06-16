@@ -64,7 +64,8 @@ export interface Service {
   basePrice?: number; // Alias for basePricePerPage for display purposes
   basePricePerPage: number;
   basePriceRanges?: { min: number; max: number; price: number }[];
-  weightPer100Sheets?: number;
+  weightSampleSheets?: number;
+  weightSampleGrams?: number;
   customQuotation?: boolean;
   printTypes: OptionPricing[];
   paperSizes: OptionPricing[];

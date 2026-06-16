@@ -19,6 +19,7 @@ import {
   type PricingSettings,
 } from "@/lib/pricing-utils";
 import { axiosInstance } from "@/lib/axios";
+import { getCheckoutRate, type CheckoutRateResult } from "@/lib/shiprocket-api";
 import { generateId } from "@/lib/file-utils";
 import { StepIndicator } from "./step-indicator";
 import { FileUploadStep } from "./file-upload-step";
@@ -78,6 +79,9 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     useState<Service>(service);
   const [allServices, setAllServices] = useState<Service[]>([service]);
   const [pricingSettings, setPricingSettings] = useState<PricingSettings | undefined>(undefined);
+  const [shippingRate, setShippingRate] = useState<CheckoutRateResult | null>(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+  const [selectedShipping, setSelectedShipping] = useState<"recommended" | "fastest">("recommended");
 
   // Fetch pricing settings on mount
   useEffect(() => {
@@ -163,16 +167,46 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     setDeliveryInfo(info);
   }, []);
 
+  // Fetch Shiprocket rate when pincode is ready
+  const fetchShippingRate = useCallback(
+    async (pincode: string) => {
+      if (!/^\d{6}$/.test(pincode) || orderItems.length === 0) {
+        setShippingRate(null);
+        return;
+      }
+      setIsLoadingRate(true);
+      try {
+        const result = await getCheckoutRate({
+          deliveryPincode: pincode,
+          items: orderItems.map((item) => ({
+            serviceId: item.serviceId,
+            pageCount: item.file.pageCount,
+            copies: item.configuration.copies,
+          })),
+        });
+        setShippingRate(result);
+      } catch {
+        setShippingRate(null);
+      } finally {
+        setIsLoadingRate(false);
+      }
+    },
+    [orderItems],
+  );
+
   // Calculate order totals
   const subtotal = orderItems.reduce(
     (sum, item) => sum + item.pricing.subtotal,
     0,
   );
-  const deliveryCharge = getDeliveryCharge(
-    subtotal,
-    deliveryInfo.state,
-    pricingSettings,
-  );
+  const selectedOption =
+    selectedShipping === "fastest" && shippingRate?.fastest
+      ? shippingRate.fastest
+      : shippingRate?.recommended ?? null;
+  const deliveryCharge =
+    shippingRate && !shippingRate.fallback && selectedOption
+      ? selectedOption.rate
+      : getDeliveryCharge(subtotal, deliveryInfo.state, pricingSettings);
   const packingCharge = getPackingCharge(subtotal, pricingSettings);
   const { total } = calculateOrderTotals(
     orderItems.map((item) => item.pricing.subtotal),
@@ -272,6 +306,13 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
             total={total}
             onBack={() => goToStep("configure")}
             pricingSettings={pricingSettings}
+            isLoadingRate={isLoadingRate}
+            recommended={shippingRate?.recommended ?? null}
+            fastest={shippingRate?.fastest ?? null}
+            selectedShipping={selectedShipping}
+            onShippingChange={setSelectedShipping}
+            isServiceable={shippingRate?.serviceable ?? true}
+            onPincodeReady={fetchShippingRate}
           />
         )}
       </div>

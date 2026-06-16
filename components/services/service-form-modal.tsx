@@ -275,7 +275,8 @@ export function ServiceFormModal({
       image: null,
       basePricePerPage: 0,
       basePriceRanges: [],
-      weightPer100Sheets: 500,
+      weightSampleSheets: 100,
+      weightSampleGrams: 500,
       customQuotation: false,
       printTypes: [],
       paperSizes: [],
@@ -358,6 +359,13 @@ export function ServiceFormModal({
           "Base price range min must be less than max";
         break;
       }
+    }
+
+    // Shipping weight validation
+    const sampleSheets = formData.weightSampleSheets;
+    const sampleGrams = formData.weightSampleGrams;
+    if (!sampleSheets || sampleSheets <= 0 || !sampleGrams || sampleGrams <= 0) {
+      newErrors.shippingWeight = "Both number of sheets and weight are required";
     }
 
     // Option validations (only for non-custom-quotation services)
@@ -627,24 +635,90 @@ export function ServiceFormModal({
             )}
           </div>
 
-          {/* Weight per 100 Sheets */}
-          <div className="space-y-2">
-            <Label htmlFor="weightPer100Sheets" className="text-sm font-semibold">
-              Weight per 100 Sheets (grams)
+          {/* Shipping Weight */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">
+              Shipping Weight <span className="text-destructive">*</span>
             </Label>
-            <NumberStepper
-              id="weightPer100Sheets"
-              value={formData.weightPer100Sheets || 500}
-              onChange={(v) => setFormData({ ...formData, weightPer100Sheets: v })}
-              step={10}
-              min={10}
-              max={5000}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              Used for shipping weight calculation. Weigh 100 sheets and enter the
-              value. Standard A4 80 GSM ≈ 500g. A4 170 GSM ≈ 1000g. A3 80 GSM ≈ 1000g.
+            <p className="text-xs text-muted-foreground -mt-1">
+              Weigh any number of sheets and enter the values. Used to calculate shipping weight per order.
             </p>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Input
+                  type="number"
+                  value={formData.weightSampleSheets || ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, weightSampleSheets: Number(e.target.value) || 0 });
+                    if (errors.shippingWeight) setErrors({ ...errors, shippingWeight: "" });
+                  }}
+                  placeholder="100"
+                  min={1}
+                  className={cn("pr-14", errors.shippingWeight && "border-red-500")}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                  sheets
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground font-medium">=</span>
+              <div className="relative flex-1">
+                <Input
+                  type="number"
+                  value={formData.weightSampleGrams || ""}
+                  onChange={(e) => {
+                    setFormData({ ...formData, weightSampleGrams: Number(e.target.value) || 0 });
+                    if (errors.shippingWeight) setErrors({ ...errors, shippingWeight: "" });
+                  }}
+                  placeholder="500"
+                  min={1}
+                  className={cn("pr-8", errors.shippingWeight && "border-red-500")}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                  g
+                </span>
+              </div>
+            </div>
+            {formData.weightSampleSheets && formData.weightSampleGrams ? (
+              <p className="text-xs text-primary font-medium">
+                ≈ {(formData.weightSampleGrams / formData.weightSampleSheets).toFixed(1)}g per sheet
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "A4 80 GSM", sheets: 100, grams: 500 },
+                { label: "A4 170 GSM", sheets: 100, grams: 1000 },
+                { label: "A3 80 GSM", sheets: 100, grams: 1000 },
+              ].map((preset) => {
+                const isActive =
+                  formData.weightSampleSheets === preset.sheets &&
+                  formData.weightSampleGrams === preset.grams;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        weightSampleSheets: preset.sheets,
+                        weightSampleGrams: preset.grams,
+                      });
+                      if (errors.shippingWeight) setErrors({ ...errors, shippingWeight: "" });
+                    }}
+                    className={cn(
+                      "text-[11px] px-2.5 py-1 rounded-full border transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50",
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.shippingWeight && (
+              <p className="text-xs text-red-500">{errors.shippingWeight}</p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2 border border-border/50 p-4 rounded-lg bg-muted/20">
