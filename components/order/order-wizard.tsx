@@ -167,6 +167,12 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
     setDeliveryInfo(info);
   }, []);
 
+  // Calculate subtotal early (needed by fetchShippingRate)
+  const subtotal = orderItems.reduce(
+    (sum, item) => sum + item.pricing.subtotal,
+    0,
+  );
+
   // Fetch Shiprocket rate when pincode is ready
   const fetchShippingRate = useCallback(
     async (pincode: string) => {
@@ -178,6 +184,7 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
       try {
         const result = await getCheckoutRate({
           deliveryPincode: pincode,
+          orderValue: subtotal,
           items: orderItems.map((item) => ({
             serviceId: item.serviceId,
             pageCount: item.file.pageCount,
@@ -191,14 +198,10 @@ export function OrderWizard({ service, onLoadAllServices }: OrderWizardProps) {
         setIsLoadingRate(false);
       }
     },
-    [orderItems],
+    [orderItems, subtotal],
   );
 
   // Calculate order totals
-  const subtotal = orderItems.reduce(
-    (sum, item) => sum + item.pricing.subtotal,
-    0,
-  );
   const selectedOption =
     selectedShipping === "fastest" && shippingRate?.fastest
       ? shippingRate.fastest

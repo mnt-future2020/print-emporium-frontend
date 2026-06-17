@@ -174,6 +174,7 @@ export interface CheckoutRateResult {
 
 export const getCheckoutRate = async (params: {
   deliveryPincode: string;
+  orderValue?: number;
   items: Array<{ serviceId: string; pageCount: number; copies: number }>;
 }): Promise<CheckoutRateResult> => {
   const res = await axiosInstance.post("/api/shipping/checkout-rate", params);
