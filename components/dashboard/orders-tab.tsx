@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,6 +193,8 @@ const statusConfig = {
 };
 
 export function OrdersTab({ user }: OrdersTabProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +290,29 @@ export function OrdersTab({ user }: OrdersTabProps) {
   useEffect(() => {
     fetchOrders();
   }, [page, statusFilter, search]);
+
+  // Auto-open order modal when redirected from /dashboard/orders/[id]
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || loading || orders.length === 0) return;
+
+    const order = orders.find((o) => o._id === openId);
+    if (order) {
+      setSelectedOrder(order);
+    } else {
+      // Order not in current page — fetch it directly
+      const endpoint = isAdminOrEmployee
+        ? `/api/orders/admin/${openId}`
+        : `/api/orders/${openId}`;
+      axiosInstance.get(endpoint).then((res) => {
+        if (res.data.success && res.data.order) {
+          setSelectedOrder(res.data.order);
+        }
+      }).catch(() => {});
+    }
+    // Clear the query param so refreshing doesn't re-open
+    router.replace("/dashboard/orders", { scroll: false });
+  }, [searchParams, loading, orders, isAdminOrEmployee, router]);
 
   const fetchOrders = async () => {
     try {
@@ -1319,7 +1345,7 @@ export function OrdersTab({ user }: OrdersTabProps) {
                       <div>
                         <p className="text-xs text-muted-foreground">Address</p>
                         <p className="font-medium">
-                          {selectedOrder.deliveryInfo?.address || "N/A"}
+                          {[selectedOrder.deliveryInfo?.doorNumber, selectedOrder.deliveryInfo?.address].filter(Boolean).join(", ") || "N/A"}
                         </p>
                         <p className="font-medium">
                           {selectedOrder.deliveryInfo?.city || ""},{" "}
