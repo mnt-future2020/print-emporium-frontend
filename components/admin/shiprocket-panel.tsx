@@ -257,12 +257,14 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
 
   const isPaid = order.paymentStatus === "paid";
   const canPush = isPaid && order.status === "printing";
-  const hasShipment = !!sr.shipmentId;
-  const hasAwb = !!sr.awbCode;
+  const hasShipment = !!sr.shipmentId && sr.shipmentId !== "undefined";
+  const hasAwb = !!sr.awbCode && sr.awbCode !== "undefined";
   const activities: TrackingActivity[] = tracking?.shipment_track_activities || [];
 
   // Step progress: 1=Push 2=AWB 3=Pickup 4=Done
   const currentStep = !hasShipment ? 1 : !hasAwb ? 2 : 3;
+
+  const validOrderId = sr.orderId && sr.orderId !== "undefined";
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -315,12 +317,12 @@ export function ShiprocketPanel({ order, onUpdated }: Props) {
       </div>
 
       {/* Meta — compact grid */}
-      {(sr.orderId || sr.awbCode) && (
+      {(validOrderId || hasAwb) && (
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs p-3 rounded-md bg-muted/30">
-          {sr.awbCode && <Meta label="AWB" value={sr.awbCode} mono />}
+          {hasAwb && <Meta label="AWB" value={sr.awbCode!} mono />}
           {sr.courierName && <Meta label="Courier" value={sr.courierName} />}
-          {sr.orderId && <Meta label="SR Order" value={sr.orderId} mono />}
-          {sr.shipmentId && <Meta label="Shipment" value={sr.shipmentId} mono />}
+          {validOrderId && <Meta label="SR Order" value={sr.orderId!} mono />}
+          {hasShipment && <Meta label="Shipment" value={sr.shipmentId!} mono />}
           {sr.lastSyncedAt && <Meta label="Synced" value={fmtDate(sr.lastSyncedAt)} />}
         </div>
       )}

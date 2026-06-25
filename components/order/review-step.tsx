@@ -219,9 +219,15 @@ export function ReviewStep({
   const pincodeAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Trigger shipping rate calculation on mount if pincode is already valid
+    if (deliveryInfo.pincode?.length === 6) {
+      onPincodeReady?.(deliveryInfo.pincode);
+    }
+
     return () => {
       pincodeAbortRef.current?.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPincodeDetails = async (pincode: string) => {
