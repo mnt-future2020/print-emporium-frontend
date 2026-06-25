@@ -319,6 +319,27 @@ export function OrdersTab({ user }: OrdersTabProps) {
     const order = orders.find((o) => o._id === orderId);
 
     if (newStatus === "shipped") {
+      const awb = order?.shiprocket?.awbCode || order?.trackingNumber;
+      if (awb) {
+        // Shiprocket AWB already assigned — skip manual tracking dialog
+        try {
+          const response = await axiosInstance.put(
+            `/api/orders/admin/${orderId}/status`,
+            { status: "shipped", trackingNumber: awb },
+          );
+          if (response.data.success) {
+            toast.success(`Order marked as shipped (AWB: ${awb})`);
+            fetchOrders();
+            if (selectedOrder?._id === orderId) {
+              setSelectedOrder({ ...selectedOrder, status: "shipped", trackingNumber: awb });
+            }
+          }
+        } catch (err: unknown) {
+          toast.error((err as AxiosErrorShape).response?.data?.message || "Failed to update status");
+        }
+        return;
+      }
+      // No AWB — show manual tracking number dialog
       setStatusUpdateData({
         id: orderId,
         status: newStatus,
